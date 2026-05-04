@@ -141,40 +141,46 @@ function SourcesChip({ sources }: { sources: SourceHit[] }) {
 
 function ThinkingIndicator() {
   const [elapsed, setElapsed] = useState(0);
-  const [phaseIdx, setPhaseIdx] = useState(0);
   const phases = [
-    "Cerco fonti rilevanti nel corpus…",
-    "Analizzo pattern psicologici e leve…",
-    "Anticipo il comportamento dell'altro…",
-    "Costruisco piano d'azione con timing…",
-    "Affilo la risposta…",
+    { t: 0,  label: "Cerco fonti rilevanti nel corpus…" },
+    { t: 5,  label: "Analizzo pattern psicologici e leve…" },
+    { t: 15, label: "Anticipo il comportamento dell'altro…" },
+    { t: 30, label: "Costruisco piano d'azione con timing…" },
+    { t: 50, label: "Affilo la risposta, sto arrivando al dunque…" },
+    { t: 80, label: "Rifinitura finale — manca poco…" },
+    { t: 120, label: "La risposta è lunga, sto completando…" },
   ];
   useEffect(() => {
     const t = setInterval(() => setElapsed((e) => e + 1), 1000);
     return () => clearInterval(t);
   }, []);
-  useEffect(() => {
-    const p = setInterval(() => setPhaseIdx((i) => (i + 1) % phases.length), 2200);
-    return () => clearInterval(p);
-  }, []);
-  const eta = Math.max(0, 8 - elapsed);
+  const currentPhase = phases.filter((p) => elapsed >= p.t).slice(-1)[0] ?? phases[0];
+  // Curva asintotica realistica: non raggiunge mai il 100% finché non arriva la risposta
+  // ~25% a 10s, ~50% a 25s, ~75% a 55s, ~90% a 100s
+  const progress = (1 - Math.exp(-elapsed / 35)) * 100;
+  const mm = Math.floor(elapsed / 60);
+  const ss = elapsed % 60;
+  const timeStr = mm > 0 ? `${mm}m ${ss.toString().padStart(2, "0")}s` : `${elapsed}s`;
   return (
     <div className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-800 mr-8 space-y-2">
       <div className="flex items-center justify-between gap-3 text-sm">
         <div className="flex items-center gap-2 text-zinc-300">
           <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
-          <span>{phases[phaseIdx]}</span>
+          <span>{currentPhase.label}</span>
         </div>
-        <div className="text-xs text-zinc-500 tabular-nums shrink-0">
-          {eta > 0 ? `~${eta}s` : `${elapsed}s`}
-        </div>
+        <div className="text-xs text-zinc-500 tabular-nums shrink-0">{timeStr}</div>
       </div>
       <div className="h-1 w-full bg-zinc-800 rounded overflow-hidden">
         <div
-          className="h-full bg-indigo-500 transition-all duration-1000"
-          style={{ width: `${Math.min(95, elapsed * 12)}%` }}
+          className="h-full bg-indigo-500 transition-all duration-700 ease-out"
+          style={{ width: `${progress.toFixed(1)}%` }}
         />
       </div>
+      {elapsed >= 60 && (
+        <div className="text-[11px] text-zinc-500">
+          Sta costruendo una risposta approfondita. Puoi già scrivere il prossimo messaggio: verrà messo in coda.
+        </div>
+      )}
     </div>
   );
 }
