@@ -8,6 +8,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [mlConsent, setMlConsent] = useState(false);
+  const [streakOptIn, setStreakOptIn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -27,10 +28,11 @@ export default function SettingsPage() {
       // load ml consent
       const { data: settings } = await c
         .from("user_settings")
-        .select("ml_consent")
+        .select("ml_consent, streak_opt_in")
         .eq("user_id", data.session.user.id)
         .single();
       setMlConsent(settings?.ml_consent ?? false);
+      setStreakOptIn(settings?.streak_opt_in ?? false);
       setLoading(false);
     });
   }, [router]);
@@ -52,6 +54,23 @@ export default function SettingsPage() {
     setMlConsent(newVal);
     setSaving(false);
     setMsg(newVal ? "Contributo aggregato attivato. Grazie." : "Consenso revocato.");
+    setTimeout(() => setMsg(null), 3000);
+  }
+
+  async function toggleStreak() {
+    const c = getBrowserClient();
+    if (!c) return;
+    setSaving(true);
+    const { data } = await c.auth.getSession();
+    if (!data.session) return;
+    const newVal = !streakOptIn;
+    await c
+      .from("user_settings")
+      .update({ streak_opt_in: newVal })
+      .eq("user_id", data.session.user.id);
+    setStreakOptIn(newVal);
+    setSaving(false);
+    setMsg(newVal ? "Streak gentile attivata." : "Streak disattivata.");
     setTimeout(() => setMsg(null), 3000);
   }
 
@@ -146,6 +165,27 @@ export default function SettingsPage() {
           >
             <span
               className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${mlConsent ? "translate-x-5" : "translate-x-0.5"}`}
+            />
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-zinc-800 p-5 mb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-medium text-white mb-1">Streak gentile</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">
+              Se vuoi, Atlas tiene traccia dei giorni in cui torni a lavorare su di te.
+              Nessun rimprovero se salti: serve solo a mostrarti continuità e piccole vittorie.
+            </p>
+          </div>
+          <button
+            onClick={toggleStreak}
+            disabled={saving}
+            className={`shrink-0 relative w-11 h-6 rounded-full transition-colors ${streakOptIn ? "bg-indigo-600" : "bg-zinc-700"}`}
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${streakOptIn ? "translate-x-5" : "translate-x-0.5"}`}
             />
           </button>
         </div>

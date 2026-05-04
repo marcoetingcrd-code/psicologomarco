@@ -38,10 +38,17 @@ create table if not exists public.user_settings (
   user_id uuid primary key references auth.users(id) on delete cascade,
   ml_consent boolean not null default false,           -- opt-in al contributo ML aggregato
   ml_consent_at timestamptz,
+  streak_opt_in boolean not null default false,         -- opt-in streak gentile, mai guilt-trip
+  streak_count int not null default 0,
+  last_active_at timestamptz,
   privacy_accepted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.user_settings add column if not exists streak_opt_in boolean not null default false;
+alter table public.user_settings add column if not exists streak_count int not null default 0;
+alter table public.user_settings add column if not exists last_active_at timestamptz;
 
 -- ============================================================================
 -- 4. FEEDBACK esplicito (thumbs up/down su risposta Atlas)

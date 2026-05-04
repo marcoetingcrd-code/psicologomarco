@@ -1,13 +1,43 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { saveMessage, loadMessages, getLastMessages } from "../lib/conversation-memory";
+import {
+  createConversation,
+  getCurrentUser,
+  getLastMessages,
+  loadMessages,
+  saveMessage,
+} from "../lib/chat-store";
 
 type SourceHit = {
   source: { id: string; authors: string; year: number; title: string; venue?: string; library?: string };
   score: number;
 };
 type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sources?: SourceHit[]; cached?: boolean; usedLLM?: boolean };
+
+function isGenericDatingQuestion(query: string): boolean {
+  const q = query.toLowerCase();
+  const datingIntent = /rimorchiare|rimorchio|sedurre|seduzione|approcciare|approccio|conquistare|ragazza|donne|dating|flirt/i.test(q);
+  if (!datingIntent) return false;
+  const hasConcreteContext = /instagram|tinder|appuntamento|chat|messaggi|locale|discoteca|bar|palestra|lavoro|università|scuola|ex|rifiut|ansia|timidezza|lei|nome|ieri|domani|stasera|settimana/i.test(q);
+  return !hasConcreteContext && q.length < 120;
+}
+
+function needsMoreContext(query: string): boolean {
+  const q = query.toLowerCase();
+  if (isGenericDatingQuestion(q)) return true;
+  const genericIntent = /come faccio|come posso|dammi strategie|guidami|aiutami|consiglio/i.test(q);
+  const broadTopic = /soldi|business|lavoro|carriera|forma|dimagrire|palestra|relazione|fidanzata|ex|disciplina|motivazione|smettere/i.test(q);
+  const concreteSignals = /perché|quando|ieri|domani|stasera|settimana|lei|lui|nome|ho provato|succede che|il problema è|mi blocco|mi sento|da quanto/i.test(q);
+  return genericIntent && broadTopic && !concreteSignals && q.length < 140;
+}
+
+function contextRequestFor(query: string): string {
+  if (isGenericDatingQuestion(query)) {
+    return "Prima di darti strategie devo capire meglio la situazione, altrimenti ti darei consigli generici. Dimmi tre cose: vuoi conoscere ragazze dal vivo o online? Il tuo blocco principale è approcciare, mantenere la conversazione, creare attrazione o gestire il rifiuto? E che tipo di persona vuoi attrarre?";
+  }
+  return "Prima di consigliarti ho bisogno di un po' più di contesto, altrimenti rischio di darti una risposta generica. Raccontami cosa sta succedendo concretamente: chi è coinvolto, cosa hai già provato e qual è il punto che ti blocca di più.";
+}
 
 function cleanMarkdown(text: string): string {
   return text
@@ -61,6 +91,8 @@ export default function ChatTab({ sid }: { sid: string }) {
   const [awaitingNarrative, setAwaitingNarrative] = useState(false);
   const [narrativeAttempts, setNarrativeAttempts] = useState(0);
   const [profile, setProfile] = useState<any>(null);
+  const [conversationId, setConversationId] = useState<string | undefined>(undefined);
+  const [isLocalMode, setIsLocalMode] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetch(`/api/predict?sessionId=${sid}`).then(r => r.json()).then(d => setPreds(d.predictions ?? [])); }, [sid]);
@@ -68,24 +100,43 @@ export default function ChatTab({ sid }: { sid: string }) {
 
   // Carica profilo e messaggi da localStorage all'avvio
   useEffect(() => {
-    // Carica messaggi persistiti
-    const saved = loadMessages(sid);
-    if (saved.length > 0) {
-      setMsgs(saved);
-      setAwaitingNarrative(false);
-    } else {
-      // Primo avvio: onboarding aperto
-      setAwaitingNarrative(true);
-      setMsgs([{
-        role: "assistant",
-        content: `Ciao, sono Atlas. Sono qui per aiutarti a capire e agire su quello che ti pesa.\n\nRaccontami cosa ti sta succedendo: una situazione, una domanda, un problema concreto. Anche poche parole bastano per partire.`,
-        timestamp: Date.now(),
-      }]);
+    let cancelled = false;
+    async function initMessages() {
+      const localChoice = typeof window !== "undefined" && localStorage.getItem("atlas-storage-mode") === "local";
+      setIsLocalMode(localChoice);
+      const user = await getCurrentUser();
+      let cid: string | undefined;
+      if (user && !localChoice) {
+        const existing = localStorage.getItem("atlas-current-conversation-id");
+        cid = existing || undefined;
+        if (!cid) {
+          const convo = await createConversation("Nuova conversazione");
+          cid = convo?.id;
+          if (cid) localStorage.setItem("atlas-current-conversation-id", cid);
+        }
+        setConversationId(cid);
+      }
+
+      const saved = await loadMessages(sid, cid);
+      if (cancelled) return;
+      if (saved.length > 0) {
+        setMsgs(saved as Msg[]);
+        setAwaitingNarrative(false);
+      } else {
+        setAwaitingNarrative(true);
+        setMsgs([{
+          role: "assistant",
+          content: `Ciao, sono Atlas. Sono qui per aiutarti a capire e agire su quello che ti pesa.\n\nRaccontami cosa ti sta succedendo: una situazione, una domanda, un problema concreto. Anche poche parole bastano per partire.`,
+          timestamp: Date.now(),
+        }]);
+      }
     }
+    initMessages();
     // Carica profilo
     fetch(`/api/profile?sessionId=${sid}`).then(r => r.json()).then(d => {
       if (d.profile) setProfile(d.profile);
     }).catch(() => {});
+    return () => { cancelled = true; };
   }, [sid]);
 
   async function send(q?: string) {
@@ -93,30 +144,46 @@ export default function ChatTab({ sid }: { sid: string }) {
     setInput("");
     const userMsg: Msg = { role: "user", content: query, timestamp: Date.now() };
     setMsgs(m => [...m, userMsg]);
-    saveMessage(sid, userMsg);
+    await saveMessage(sid, userMsg, conversationId);
     setLoad(true);
 
-    // Onboarding: accetta qualsiasi input utile
+    if (needsMoreContext(query)) {
+      const askMsg: Msg = { role: "assistant", content: contextRequestFor(query), timestamp: Date.now() };
+      setMsgs(m => [...m, askMsg]);
+      await saveMessage(sid, askMsg, conversationId);
+      setPreds(isGenericDatingQuestion(query) ? [
+        "Voglio conoscere ragazze dal vivo ma mi blocco ad approcciare",
+        "Uso Instagram/Tinder ma le conversazioni muoiono subito",
+        "Ho paura del rifiuto e non so come comportarmi",
+      ] : []);
+      setLoad(false);
+      return;
+    }
+
+    // Onboarding: richiede contesto reale, non accetta domande vaghe
     if (awaitingNarrative) {
       setNarrativeAttempts(prev => prev + 1);
-      const isSubstantial = query.length > 15 || /alcol|droga|fumo|dipend|relazione|lavor|sold|fitness|palestra|studio|motivazione/i.test(query);
+      const isSubstantial = !needsMoreContext(query) && (
+        query.length > 80 ||
+        /perché|quando|ieri|domani|stasera|settimana|lei|lui|partner|ex|lavoro|capo|collega|alcol|droga|fumo|ansia|panico|palestra|peso|studio/i.test(query)
+      );
 
-      if (isSubstantial || narrativeAttempts >= 1) {
+      if (isSubstantial) {
         setAwaitingNarrative(false);
         await fetch("/api/profile", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: sid, profile: { onboardingComplete: true } }),
+          body: JSON.stringify({ sessionId: sid, action: "update", data: { onboardingComplete: true } }),
         });
-        const confirmMsg: Msg = { role: "assistant", content: `Capito. Ho abbastanza per partire. Di cosa hai bisogno oggi?`, timestamp: Date.now() };
+        const confirmMsg: Msg = { role: "assistant", content: `Ok, ora ho abbastanza contesto per aiutarti meglio. Dimmi qual è il punto preciso che vuoi affrontare per primo.`, timestamp: Date.now() };
         setMsgs(m => [...m, confirmMsg]);
-        saveMessage(sid, confirmMsg);
+        await saveMessage(sid, confirmMsg, conversationId);
         setLoad(false);
         return;
       } else {
-        const askMsg: Msg = { role: "assistant", content: `Raccontami un po' di più — anche due frasi bastano. Di cosa si tratta?`, timestamp: Date.now() };
+        const askMsg: Msg = { role: "assistant", content: needsMoreContext(query) ? contextRequestFor(query) : `Raccontami un po' di più — anche due frasi bastano. Che situazione concreta vuoi risolvere?`, timestamp: Date.now() };
         setMsgs(m => [...m, askMsg]);
-        saveMessage(sid, askMsg);
+        await saveMessage(sid, askMsg, conversationId);
         setLoad(false);
         return;
       }
@@ -124,7 +191,7 @@ export default function ChatTab({ sid }: { sid: string }) {
 
     // Conversazione normale
     try {
-      const history = getLastMessages(sid, 6);
+      const history = await getLastMessages(sid, 6, conversationId);
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -133,7 +200,7 @@ export default function ChatTab({ sid }: { sid: string }) {
       const d = await r.json();
       const assistantMsg: Msg = { role: "assistant", content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
       setMsgs(m => [...m, assistantMsg]);
-      saveMessage(sid, assistantMsg);
+      await saveMessage(sid, assistantMsg, conversationId);
 
       // Smart profile probing: ogni 3 turni, se profilo incompleto, aggiungi
       // una mini-domanda profilante alle predizioni (chip cliccabile, mai bloccante)
@@ -164,7 +231,7 @@ export default function ChatTab({ sid }: { sid: string }) {
       const err = e instanceof Error ? e.message : String(e);
       const errorMsg: Msg = { role: "assistant", content: `Errore: ${err}`, timestamp: Date.now() };
       setMsgs(m => [...m, errorMsg]);
-      saveMessage(sid, errorMsg);
+      await saveMessage(sid, errorMsg, conversationId);
     } finally {
       setLoad(false);
     }
@@ -173,6 +240,11 @@ export default function ChatTab({ sid }: { sid: string }) {
   return (
     <>
       <div ref={bottomRef} className="flex-1 overflow-y-auto space-y-4 pb-32 min-h-[60vh]">
+        {isLocalMode && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-900/20 p-3 text-xs text-amber-200">
+            Modalità locale attiva: questa chat resta solo su questo dispositivo. Accedi o disattiva “salva in locale” per sincronizzare telefono e PC.
+          </div>
+        )}
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
         {msgs.map((m, i) => (
           <div

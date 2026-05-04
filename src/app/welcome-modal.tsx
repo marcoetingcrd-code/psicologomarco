@@ -40,8 +40,8 @@ export default function WelcomeModal() {
             <Shield className="w-5 h-5 text-emerald-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Le tue parole, al sicuro</h2>
-            <p className="text-xs text-zinc-400">Apri liberamente. Nessuno legge al posto tuo.</p>
+            <h2 className="text-lg font-semibold text-white">Le tue parole, sempre con te</h2>
+            <p className="text-xs text-zinc-400">Atlas salva online di default, cifrato e sincronizzato.</p>
           </div>
         </div>
 
@@ -49,15 +49,15 @@ export default function WelcomeModal() {
           <div className="flex gap-3">
             <Lock className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
             <p>
-              Le tue conversazioni sono <strong>cifrate</strong> e legate al tuo accesso.
-              Senza le tue credenziali sono illeggibili — anche per chi gestisce il sistema.
+              Con l'accesso, le conversazioni sono <strong>cifrate</strong> nel tuo spazio cloud
+              e le ritrovi da telefono, PC e tablet. Senza accesso non possono essere lette.
             </p>
           </div>
           <div className="flex gap-3">
             <Eye className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
             <p>
-              Nessun pubblicitario, nessun tracker, nessun occhio indiscreto.
-              Atlas è il tuo spazio: parla come parleresti a te stesso, ad alta voce.
+              Se scegli esplicitamente “salva solo in locale”, le chat restano soltanto su quel
+              dispositivo e non si sincronizzano. Di default, invece, Atlas punta al cloud.
             </p>
           </div>
           <div className="flex gap-3">
