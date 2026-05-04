@@ -17,7 +17,7 @@ type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sou
 
 function isGenericDatingQuestion(query: string): boolean {
   const q = query.toLowerCase();
-  const datingIntent = /rimorchiare|rimorchio|sedurre|seduzione|approcciare|approccio|conquistare|ragazza|donne|dating|flirt/i.test(q);
+  const datingIntent = /rimorchiare|rimorchio|sedurre|seduzione|approcciare|approccio|conquistare|ragazza|donne|dating|flirt|uscire con/i.test(q);
   if (!datingIntent) return false;
   const hasConcreteContext = /instagram|tinder|appuntamento|chat|messaggi|locale|discoteca|bar|palestra|lavoro|università|scuola|ex|rifiut|ansia|timidezza|lei|nome|ieri|domani|stasera|settimana/i.test(q);
   return !hasConcreteContext && q.length < 120;
@@ -34,9 +34,13 @@ function needsMoreContext(query: string): boolean {
 
 function contextRequestFor(query: string): string {
   if (isGenericDatingQuestion(query)) {
-    return "Prima di darti strategie devo capire meglio la situazione, altrimenti ti darei consigli generici. Dimmi tre cose: vuoi conoscere ragazze dal vivo o online? Il tuo blocco principale è approcciare, mantenere la conversazione, creare attrazione o gestire il rifiuto? E che tipo di persona vuoi attrarre?";
+    return `Prima di darti strategie devo capire meglio la situazione, altrimenti ti darei consigli generici.
+
+Dimmi tre cose: vuoi conoscere ragazze dal vivo o online? Il tuo blocco principale è approcciare, mantenere la conversazione, creare attrazione o gestire il rifiuto? E che tipo di persona vuoi attrarre?`;
   }
-  return "Prima di consigliarti ho bisogno di un po' più di contesto, altrimenti rischio di darti una risposta generica. Raccontami cosa sta succedendo concretamente: chi è coinvolto, cosa hai già provato e qual è il punto che ti blocca di più.";
+  return `Prima di consigliarti ho bisogno di un po' più di contesto, altrimenti rischio di darti una risposta generica.
+
+Raccontami cosa sta succedendo concretamente: chi è coinvolto, cosa hai già provato e qual è il punto che ti blocca di più.`;
 }
 
 function cleanMarkdown(text: string): string {
