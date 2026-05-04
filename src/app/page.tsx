@@ -6,6 +6,7 @@ import JournalTab from "./journal-tab";
 import AssessmentTab from "./assessment-tab";
 import ProtocolTab from "./protocol-tab";
 import AuthHeader from "./auth-header";
+import WelcomeModal from "./welcome-modal";
 
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
@@ -31,6 +32,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen flex flex-col max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+      <WelcomeModal />
       <header className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 border-b border-zinc-800 pb-3 sm:pb-4 gap-2">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
