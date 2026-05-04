@@ -1,19 +1,56 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Brain, Zap } from "lucide-react";
+import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { saveMessage, loadMessages, getLastMessages } from "../lib/conversation-memory";
 
-type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sources?: any[]; cached?: boolean; usedLLM?: boolean };
+type SourceHit = {
+  source: { id: string; authors: string; year: number; title: string; venue?: string; library?: string };
+  score: number;
+};
+type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sources?: SourceHit[]; cached?: boolean; usedLLM?: boolean };
 
 function cleanMarkdown(text: string): string {
   return text
+    // Safety net lato client: strippa source ID tipo [autore-titolo-2020]
+    .replace(/\s*\[[a-z0-9]+(?:-[a-z0-9]+)*-\d{4}\]\s*/gi, " ")
+    .replace(/\s*\[[a-z]+(?:-[a-z]+){1,4}\]\s*/gi, " ")
+    // Markdown residuo
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/\*(.*?)\*/g, "$1")
     .replace(/^\s*[-*•]\s+/gm, "")
     .replace(/^\s*\d+\.\s+/gm, "")
     .replace(/^#{1,6}\s+/gm, "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/ {2,}/g, " ")
     .replace(/\n{3,}/g, "\n\n");
+}
+
+function SourcesChip({ sources }: { sources: SourceHit[] }) {
+  const [open, setOpen] = useState(false);
+  if (!sources || sources.length === 0) return null;
+  return (
+    <div className="mt-3 pt-3 border-t border-zinc-800/60">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-[11px] text-zinc-500 hover:text-zinc-300 flex items-center gap-1.5"
+      >
+        <BookOpen className="w-3 h-3" />
+        {sources.length} {sources.length === 1 ? "fonte" : "fonti"}
+        {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+      {open && (
+        <ul className="mt-2 space-y-1.5 text-[11px] text-zinc-400">
+          {sources.map((s, i) => (
+            <li key={i} className="leading-snug">
+              <span className="text-zinc-300">{s.source.authors}</span>
+              <span className="text-zinc-500"> · {s.source.year}</span>
+              <span className="text-zinc-400"> · {s.source.title}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 export default function ChatTab({ sid }: { sid: string }) {
@@ -112,10 +149,29 @@ export default function ChatTab({ sid }: { sid: string }) {
     <>
       <div ref={bottomRef} className="flex-1 overflow-y-auto space-y-4 pb-32 min-h-[60vh]">
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
-        {msgs.map((m, i) => <div key={i} className={`rounded-xl p-4 ${m.role === "user" ? "bg-indigo-600/20 border border-indigo-500/30 ml-8" : "bg-zinc-900/80 border border-zinc-800 mr-8"}`}>
-          {m.role === "assistant" && <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2"><Brain className="w-3.5 h-3.5" /><span>Atlas</span></div>}
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">{cleanMarkdown(m.content)}</div>
-        </div>)}
+        {msgs.map((m, i) => (
+          <div
+            key={i}
+            className={`rounded-xl p-4 ${
+              m.role === "user"
+                ? "bg-indigo-600/20 border border-indigo-500/30 ml-8"
+                : "bg-zinc-900/80 border border-zinc-800 mr-8"
+            }`}
+          >
+            {m.role === "assistant" && (
+              <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2">
+                <Brain className="w-3.5 h-3.5" />
+                <span>Atlas</span>
+              </div>
+            )}
+            <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              {cleanMarkdown(m.content)}
+            </div>
+            {m.role === "assistant" && m.sources && m.sources.length > 0 && (
+              <SourcesChip sources={m.sources} />
+            )}
+          </div>
+        ))}
         {load && <div className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-800 mr-8"><div className="flex items-center gap-2 text-zinc-400 text-sm"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" /><span>Atlas sta cercando e ragionando…</span></div></div>}
       </div>
       <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black to-transparent pt-6 pb-4 px-4">
