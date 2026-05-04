@@ -5,7 +5,9 @@ import {
   createConversation,
   getCurrentUser,
   getLastMessages,
+  listConversations,
   loadMessages,
+  migrateLocalToCloud,
   saveMessage,
 } from "../lib/chat-store";
 
@@ -127,17 +129,36 @@ export default function ChatTab({ sid }: { sid: string }) {
       const user = await getCurrentUser();
       let cid: string | undefined;
       if (user && !localChoice) {
+        const migrationKey = `atlas-local-migrated-${user.id}`;
+        if (localStorage.getItem(migrationKey) !== "true") {
+          await migrateLocalToCloud(sid).catch(() => null);
+          localStorage.setItem(migrationKey, "true");
+        }
         const existing = localStorage.getItem("atlas-current-conversation-id");
         cid = existing || undefined;
         if (!cid) {
+          const conversations = await listConversations();
+          cid = conversations[0]?.id;
+        }
+        if (!cid) {
           const convo = await createConversation("Nuova conversazione");
           cid = convo?.id;
-          if (cid) localStorage.setItem("atlas-current-conversation-id", cid);
         }
+        if (cid) localStorage.setItem("atlas-current-conversation-id", cid);
         setConversationId(cid);
       }
 
-      const saved = await loadMessages(sid, cid);
+      let saved = await loadMessages(sid, cid);
+      if (user && !localChoice && cid && saved.length === 0) {
+        const conversations = await listConversations();
+        const latestExisting = conversations.find((c) => c.id !== cid);
+        if (latestExisting) {
+          cid = latestExisting.id;
+          localStorage.setItem("atlas-current-conversation-id", cid);
+          setConversationId(cid);
+          saved = await loadMessages(sid, cid);
+        }
+      }
       if (cancelled) return;
       if (saved.length > 0) {
         setMsgs(saved as Msg[]);

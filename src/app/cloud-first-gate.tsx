@@ -32,7 +32,7 @@ export default function CloudFirstGate({ children }: { children: ReactNode }) {
 
   function useLocal() {
     localStorage.setItem("atlas-storage-mode", "local");
-    window.location.reload();
+    setLocalMode(true);
   }
 
   function useCloud() {
