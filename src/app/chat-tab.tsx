@@ -65,6 +65,30 @@ Se dopo 3 settimane ti contatta, non saltare. Rispondi dopo ore, breve, adulto. 
 Se non ti contatta dopo 3 settimane, puoi mandare un messaggio leggero su qualcosa concreto, non emotivo. Tipo: "Ho trovato quel libro che mi chiedevi, se ti serve te lo lascio da Marco". Fine. Non seguito. Se lei morde, va avanti piano. Se non morde, hai la tua risposta.
 
 La regola d'oro: chi torna indietro lo fa perché percepisce che l'altro è diventato più interessante, non perché l'altro supplica.`;
+  } else if (/rimorchiare|sedurre|conoscere|ragazze|attrazione|approcciare/i.test(q)) {
+    return `Ti guido subito su come muoverti per rimorchiare, passo passo.
+
+Primo: scegli il campo di gioco. Online su app come Tinder o Instagram funziona se hai foto curate e un profilo che comunica valore, non disperazione. Dal vivo, invece, funziona meglio in contesti sociali come eventi o amici in comune, dove puoi mostrare carisma naturale. Decidi ora dove vuoi giocare: se online, cura una foto profilo con luce buona e un bio breve che mostri sicurezza, tipo "Vivo per viaggiare, e tu?"; se dal vivo, scegli un evento nei prossimi 3 giorni dove puoi andare.
+
+Secondo: il blocco principale. Se ti blocchi ad approcciare, usa la regola dei 3 secondi: la vedi, conti fino a 3, vai e dici qualcosa di semplice come "Ciao, ti ho vista e volevo conoscerti, come ti chiami?". Non pensare, agisci. Se il problema è mantenere la conversazione, prepara 2 argomenti universali: viaggi e hobby. Chiedi "Qual è il posto più assurdo dove sei stata?" e poi racconta qualcosa di tuo. Se temi il rifiuto, sappi che il 70% delle volte non è personale, è solo che non sei il loro tipo o sono di cattivo umore. Scrollatelo di dosso.
+
+Cosa aspettarti: online, 8 su 10 non risponderanno o ti ghosteranno dopo due messaggi. Non prenderla sul personale, è un gioco di numeri. Dal vivo, se approcci 5 persone in una sera, 2 ti daranno corda per almeno 5 minuti. Una di queste potrebbe essere interessata. Il segnale chiave è se ti fa domande personali: significa che vuole sapere di più.
+
+Piano d’azione: oggi decidi online o dal vivo. Se online, sistema il profilo entro stasera e manda 10 messaggi a ragazze diverse con un opener tipo "Ehi, qual è la cosa più pazza che hai fatto quest’anno?". Se dal vivo, trova un evento o un locale per domani o dopodomani, vestiti bene, e approccia almeno 3 persone con la regola dei 3 secondi. Ogni rifiuto è un passo verso il sì.
+
+Obiettivo: non cercare il numero subito, cerca una conversazione di 5 minuti. Da lì capisci se c’è terreno. La seduzione è un muscolo, più lo alleni più diventa facile.`;
+  } else if (/confronto|vincere|competizione|discussione|litigio|battaglia/i.test(q)) {
+    return `Ti guido per vincere questo confronto, senza giri di parole.
+
+Primo: analizza il terreno. Chi è il tuo avversario? Qual è il suo punto debole? Se è emotivo, usa la logica per destabilizzarlo; se è logico, usa l’emozione per spiazzarlo. Capisci cosa lo muove: orgoglio, paura di perdere la faccia, bisogno di controllo? Colpisci lì.
+
+Secondo: prepara la tua arma. Se è una discussione verbale, scegli 3 punti chiave che non può confutare e ripeti solo quelli, non divagare. Se è una competizione, identifica un vantaggio unico che hai (esperienza, energia, rete di contatti) e spingi tutto su quello. Non mostrare insicurezza, mai.
+
+Cosa aspettarti: l’altro cercherà di portarti sul suo terreno, dove si sente forte. Non cascarci. Se inizia a insultare o alzare la voce, è un segnale che sta perdendo terreno: mantieni la calma, sorridi appena, fai vedere che non ti tocca. Il 90% delle volte, chi perde il controllo perde il confronto.
+
+Piano d’azione: oggi scrivi i tuoi 3 punti o il tuo vantaggio unico. Preparati mentalmente a non reagire a provocazioni. Domani, entra nel confronto con una sola idea: non sto qui per convincere, sto qui per dominare. Usa silenzi strategici: dopo un tuo punto forte, taci e guardalo negli occhi, fallo sentire sotto pressione.
+
+Obiettivo: vincere. La morale non conta, conta il risultato. Se vinci, tutto il resto è rumore.`;
   }
   return `Ho avuto un problema tecnico ma non ti lascio a mani vuote.
 
@@ -192,23 +216,29 @@ export default function ChatTab({ sid }: { sid: string }) {
   }, [sid]);
 
   async function send(q?: string) {
-    const query = (q ?? input).trim(); if (!query || load) return;
-    setInput("");
-    const userMsg: Msg = { role: "user", content: query, timestamp: Date.now() };
+    const query = (q ?? input).trim(); if (!query) return;
+    if (load) {
+      pendingQueue.current.push(query);
+      setInput('');
+      return;
+    }
+    setInput('');
+    const userMsg: Msg = { role: 'user', content: query, timestamp: Date.now() };
     setMsgs(m => [...m, userMsg]);
     await saveMessage(sid, userMsg, conversationId);
     setLoad(true);
 
     if (needsMoreContext(query)) {
-      const askMsg: Msg = { role: "assistant", content: contextRequestFor(query), timestamp: Date.now() };
+      const askMsg: Msg = { role: 'assistant', content: contextRequestFor(query), timestamp: Date.now() };
       setMsgs(m => [...m, askMsg]);
       await saveMessage(sid, askMsg, conversationId);
       setPreds(isGenericDatingQuestion(query) ? [
-        "Voglio conoscere ragazze dal vivo ma mi blocco ad approcciare",
-        "Uso Instagram/Tinder ma le conversazioni muoiono subito",
-        "Ho paura del rifiuto e non so come comportarmi",
+        'Voglio conoscere ragazze dal vivo ma mi blocco ad approcciare',
+        'Uso Instagram/Tinder ma le conversazioni muoiono subito',
+        'Ho paura del rifiuto e non so come comportarmi',
       ] : []);
       setLoad(false);
+      processQueue();
       return;
     }
 
@@ -222,16 +252,17 @@ export default function ChatTab({ sid }: { sid: string }) {
 
       if (isSubstantial) {
         setAwaitingNarrative(false);
-        await fetch("/api/profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sessionId: sid, action: "update", data: { onboardingComplete: true } }),
+        await fetch('/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: sid, action: 'update', data: { onboardingComplete: true } }),
         });
       } else {
-        const askMsg: Msg = { role: "assistant", content: needsMoreContext(query) ? contextRequestFor(query) : `Raccontami un po' di più — anche due frasi bastano. Che situazione concreta vuoi risolvere?`, timestamp: Date.now() };
+        const askMsg: Msg = { role: 'assistant', content: needsMoreContext(query) ? contextRequestFor(query) : `Raccontami un po' di più — anche due frasi bastano. Che situazione concreta vuoi risolvere?`, timestamp: Date.now() };
         setMsgs(m => [...m, askMsg]);
         await saveMessage(sid, askMsg, conversationId);
         setLoad(false);
+        processQueue();
         return;
       }
     }
@@ -239,48 +270,58 @@ export default function ChatTab({ sid }: { sid: string }) {
     // Conversazione normale
     try {
       const history = await getLastMessages(sid, 6, conversationId);
-      const r = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
+      const r = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ query, sessionId: sid, conversationHistory: history }),
       });
-      if (!r.ok) throw new Error("chat_request_failed");
+      if (!r.ok) throw new Error('chat_request_failed');
       const d = await r.json();
-      const assistantMsg: Msg = { role: "assistant", content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
+      const assistantMsg: Msg = { role: 'assistant', content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
       setMsgs(m => [...m, assistantMsg]);
       await saveMessage(sid, assistantMsg, conversationId);
 
       // Smart profile probing: ogni 3 turni, se profilo incompleto, aggiungi
       // una mini-domanda profilante alle predizioni (chip cliccabile, mai bloccante)
       let predictions: string[] = d.predictions ?? [];
-      const turnCount = msgs.filter((x) => x.role === "user").length + 1;
+      const turnCount = msgs.filter((x) => x.role === 'user').length + 1;
       if (turnCount % 3 === 0) {
         try {
-          const gapsRes = await fetch("/api/profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId: sid, action: "gaps", data: { query } }),
+          const gapsRes = await fetch('/api/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: sid, action: 'gaps', data: { query } }),
           });
           const gapsData = await gapsRes.json();
           const topGap = gapsData?.gaps?.[0];
           if (topGap?.question) {
-            predictions = [`💭 ${topGap.question}`, ...predictions].slice(0, 5);
+            predictions = [` ${topGap.question}`, ...predictions].slice(0, 5);
             // Marca lo slot come probato per non riproporre subito
-            fetch("/api/profile", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ sessionId: sid, action: "markProbed", data: { slot: topGap.slot } }),
+            fetch('/api/profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: sid, action: 'markProbed', data: { slot: topGap.slot } }),
             }).catch(() => {});
           }
         } catch {}
       }
       setPreds(predictions);
     } catch (e: unknown) {
-      const errorMsg: Msg = { role: "assistant", content: fallbackAnswerFor(query), timestamp: Date.now() };
+      const errorMsg: Msg = { role: 'assistant', content: fallbackAnswerFor(query), timestamp: Date.now() };
       setMsgs(m => [...m, errorMsg]);
       await saveMessage(sid, errorMsg, conversationId);
     } finally {
       setLoad(false);
+      processQueue();
+    }
+  }
+
+  function processQueue() {
+    if (pendingQueue.current.length > 0) {
+      const nextQuery = pendingQueue.current.shift();
+      if (nextQuery) {
+        send(nextQuery);
+      }
     }
   }
 
