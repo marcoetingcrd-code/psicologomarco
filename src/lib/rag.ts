@@ -2,11 +2,25 @@ import { search } from "./vectorstore";
 import { generate, hasGemini } from "./gemini";
 import { enforceAnswerConstraint } from "./conversational-analysis";
 import type { Source } from "./corpus";
+import {
+  type CaseFile,
+  type CaseDomain,
+  DOMAIN_SLOTS,
+  nextMissingSlot,
+  summarizeCaseFile,
+} from "./case-file";
+import { detectSafety, safetyResponse } from "./sovereign/safety";
 
 export interface RagResult {
   answer: string;
   sources: { source: Source; score: number }[];
   usedLLM: boolean;
+  /** Se la safety è stata triggerata, questa risposta è in modalità soft. */
+  safetyTriggered?: boolean;
+  /** Indica che Atlas sta scavando perché readiness < gate (non ha ancora dato il piano). */
+  digging?: boolean;
+  /** Readiness corrente del case file dopo la risposta (se passato). */
+  readiness?: number;
 }
 
 // Soglia minima di similarità per considerare una fonte rilevante
@@ -64,54 +78,95 @@ function sanitizeOutput(text: string): string {
     .trim();
 }
 
+/** Soglia di readiness sopra cui Atlas smette di scavare e dà il piano completo. */
+const PLAN_READINESS_GATE = 65;
+
 export async function answer(
   query: string,
   deepMode = false,
   sessionId?: string,
-  conversationHistory?: { role: string; content: string }[]
+  conversationHistory?: { role: string; content: string }[],
+  caseFile?: CaseFile | null
 ): Promise<RagResult> {
-  // Retrieval chirurgico: prendi top-5 poi filtra per threshold, max MAX_HITS
+  // 1. SAFETY BRAKE — sempre prima di tutto, non disattivabile.
+  const safety = detectSafety(query);
+  if (safety.triggered) {
+    return {
+      answer: safetyResponse(safety.severity),
+      sources: [],
+      usedLLM: false,
+      safetyTriggered: true,
+    };
+  }
+
+  // 2. Retrieval chirurgico
   const allHits = await search(query, 5);
   const hits = allHits.filter((h) => h.score >= RELEVANCE_THRESHOLD).slice(0, MAX_HITS);
 
-  // Build conversation context if history exists
+  // 3. Build conversation context (ultimi 10 turni invece di 6, abbiamo più spazio)
   let conversationContext = "";
   if (conversationHistory && conversationHistory.length > 0) {
     conversationContext = "CONVERSAZIONE PRECEDENTE:\n" + conversationHistory
-      .slice(-6)
+      .slice(-10)
       .map((m) => `${m.role === "user" ? "Utente" : "Atlas"}: ${m.content}`)
       .join("\n\n") + "\n\n---\n\n";
   }
 
-  // Atlas Engine: ragionamento interno basato su corpus + profilo
-  const engineAnswer = atlasEngine(query, hits);
-
-  // Deep Mode: bypassa Gemini, restituisce reasoning grezzo con metacognizione visibile
-  if (deepMode) {
-    const deepAnswer = `[Deep Mode — Atlas Engine raw]\n\n${sanitizeOutput(engineAnswer)}`;
-    return { answer: deepAnswer, sources: hits, usedLLM: false };
+  // 4. Case file context (dossier strategico)
+  let caseContext = "";
+  let dossierBlock = "";
+  let isDigging = false;
+  if (caseFile) {
+    dossierBlock = summarizeCaseFile(caseFile);
+    caseContext = `DOSSIER DEL CASO (uso interno, parla in 1ª persona, NON elencare i fatti come tabella):\n${dossierBlock}\n\n---\n\n`;
+    isDigging = caseFile.readiness < PLAN_READINESS_GATE;
   }
 
-  // Se Gemini è disponibile, usa la risposta Atlas come contesto interno
-  // e chiedi una riscrittura linguistica elegante (vernice, non sostanza)
+  // 5. Atlas Engine
+  const engineAnswer = atlasEngine(query, hits);
+
+  if (deepMode) {
+    const deepAnswer = `[Deep Mode — Atlas Engine raw]\n\n${sanitizeOutput(engineAnswer)}`;
+    return { answer: deepAnswer, sources: hits, usedLLM: false, readiness: caseFile?.readiness };
+  }
+
+  // 6. Costruzione prompt finale
   if (hasGemini()) {
-    // Note per LLM: il testo interno può contenere source ID tra [parentesi quadre].
-    // L'LLM deve assolutamente rimuoverli, non ripeterli.
-    let prompt = `${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare: questa è la linea strategica che Atlas deve seguire, la puoi rifinire ma il contenuto e l'angolo restano questi):\n${engineAnswer}\n\nISTRUZIONI DI RIFINITURA:\n- Mantieni ESATTAMENTE il tema della risposta base: se parla di ex/riconquista, tu parli di ex/riconquista; se parla di alcol, tu parli di alcol. NON deviare.\n- Parla come stratega diretto, affilato, senza fronzoli. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", non fare bibliografia.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Dai mosse numerate e concrete, con cosa aspettarti a ogni step.\n- Lunga se serve (l'utente vuole guida dettagliata), mai generica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.`;
+    let modeInstructions = "";
+    if (isDigging && caseFile) {
+      const missing = nextMissingSlot(caseFile.domain, caseFile.facts);
+      const slot = missing
+        ? `Slot prioritario mancante: ${missing.label} — domanda guida: "${missing.questionTemplate}"`
+        : "Slot prioritario: nessuno (anomalia, vai dritto al piano).";
+      modeInstructions = `MODALITÀ SCAVO ATTIVA (readiness ${caseFile.readiness}% < ${PLAN_READINESS_GATE}%): NON dare ancora il piano completo. Devi:\n1. In una frase brevissima, riepilogare ciò che già sai del caso (massimo 2 fatti, in maniera implicita: "da quello che mi hai detto…").\n2. Fare UNA sola domanda mirata sullo slot prioritario mancante. Riformula naturalmente, NON copiare il template.\n3. Spiegare in mezza frase perché quella info ti serve ("mi serve per capire quale leva…").\n4. Se l'utente sta chiedendo aiuto urgente, validalo brevemente prima di chiedere ("ti aiuto, ma…").\nNON elencare a punti, non fare le 4 cose come lista. Devi parlare come uno stratega in conversazione, non come un form.\n${slot}`;
+    } else if (caseFile && caseFile.readiness >= PLAN_READINESS_GATE) {
+      modeInstructions = `MODALITÀ PIANO ATTIVA (readiness ${caseFile.readiness}% >= ${PLAN_READINESS_GATE}%): hai abbastanza intel. Costruisci un piano CUCITO sui fatti specifici del dossier (cita SOLO fatti del dossier, non inventare). Mosse numerate, timing preciso, anticipazione del comportamento dell'altra persona, segnali di verifica per ogni mossa. Lunga abbastanza da essere completa.`;
+    } else {
+      modeInstructions = `MODALITÀ STANDARD: rispondi come stratega diretto. Se la domanda è vaga, fai UNA domanda chirurgica per orientare; altrimenti dai un piano d'azione concreto con timing.`;
+    }
+
+    // Cliffhanger: chiedi a Gemini di chiudere con un seed di curiosità SE ha materiale reale.
+    const cliffhangerInstruction = `Concludi (se pertinente) con UNA frase massimo di curiosity gap su qualcosa di SPECIFICO che hai notato e che approfondirai la prossima volta — mai inventato, solo se hai un osservazione reale dal dossier o dalla conversazione. Se non hai nulla di reale, NON forzare e chiudi normalmente.`;
+
+    let prompt = `${caseContext}${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare):\n${engineAnswer}\n\n${modeInstructions}\n\nISTRUZIONI GENERALI:\n- Mantieni il tema della risposta base. NON deviare.\n- Parla come stratega diretto, affilato. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", niente bibliografia, niente nomi di studiosi.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Quando dai un piano: mosse numerate, ognuna con segnale di verifica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.\n${cliffhangerInstruction}`;
     if (sessionId) {
       prompt += enforceAnswerConstraint(sessionId);
     }
     try {
       const text = await generate(prompt, SYSTEM);
-      return { answer: sanitizeOutput(text), sources: hits, usedLLM: true };
+      return {
+        answer: sanitizeOutput(text),
+        sources: hits,
+        usedLLM: true,
+        digging: isDigging,
+        readiness: caseFile?.readiness,
+      };
     } catch {
-      // Fallback se Gemini fallisce
-      return { answer: sanitizeOutput(engineAnswer), sources: hits, usedLLM: false };
+      return { answer: sanitizeOutput(engineAnswer), sources: hits, usedLLM: false, readiness: caseFile?.readiness };
     }
   }
 
-  // Default: Atlas Engine puro (zero dipendenza esterna)
-  return { answer: sanitizeOutput(engineAnswer), sources: hits, usedLLM: false };
+  return { answer: sanitizeOutput(engineAnswer), sources: hits, usedLLM: false, readiness: caseFile?.readiness };
 }
 
 // Atlas Engine: genera UN consiglio focalizzato sul tema dominante della domanda.

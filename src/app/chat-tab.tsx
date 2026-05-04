@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp, FileText, Search } from "lucide-react";
 import {
   createConversation,
   getCurrentUser,
@@ -10,6 +10,15 @@ import {
   migrateLocalToCloud,
   saveMessage,
 } from "../lib/chat-store";
+import {
+  type CaseFile,
+  type CaseDomain,
+  loadCaseFile,
+  saveCaseFile,
+  extractAndApplyLight,
+  DOMAIN_SLOTS,
+} from "../lib/case-file";
+import { isSupabaseReady, getBrowserClient } from "../lib/supabase";
 
 type SourceHit = {
   source: { id: string; authors: string; year: number; title: string; venue?: string; library?: string };
@@ -163,6 +172,96 @@ function SourcesChip({ sources }: { sources: SourceHit[] }) {
   );
 }
 
+async function isCloudUser(): Promise<boolean> {
+  if (!isSupabaseReady()) return false;
+  const c = getBrowserClient();
+  if (!c) return false;
+  const { data } = await c.auth.getSession();
+  return !!data.session;
+}
+
+function DossierBadge({
+  caseFile,
+  onToggle,
+  open,
+}: {
+  caseFile: CaseFile | null;
+  onToggle: () => void;
+  open: boolean;
+}) {
+  if (!caseFile || caseFile.readiness === 0) return null;
+  const slots = DOMAIN_SLOTS[caseFile.domain] ?? DOMAIN_SLOTS.generic;
+  const facts = Object.values(caseFile.facts ?? {});
+  const knownLabels = slots
+    .filter((s) => caseFile.facts?.[s.key]?.value)
+    .map((s) => ({ label: s.label, value: caseFile.facts[s.key].value }));
+  const ready = caseFile.readiness;
+  const ringColor = ready >= 65 ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10" : ready >= 35 ? "text-amber-300 border-amber-500/40 bg-amber-500/10" : "text-zinc-400 border-zinc-700 bg-zinc-800/40";
+  return (
+    <div className="sticky top-0 z-10 -mx-3 px-3 sm:mx-0 sm:px-0 mb-2">
+      <button
+        onClick={onToggle}
+        className={`w-full flex items-center justify-between gap-3 rounded-lg border ${ringColor} px-3 py-2 text-xs hover:opacity-90 transition`}
+        aria-label="Apri dossier del caso"
+      >
+        <div className="flex items-center gap-2">
+          <FileText className="w-3.5 h-3.5" />
+          <span className="font-medium">Caso: {caseFile.domain.replace("_", " ")}</span>
+          <span className="text-zinc-500">·</span>
+          <span>{ready}% intel</span>
+          <span className="text-zinc-500">·</span>
+          <span>{facts.length} fatti</span>
+          {ready >= 65 && <span className="text-emerald-400 ml-1">✓ pronto al piano</span>}
+        </div>
+        {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+      </button>
+      {open && (
+        <div className="mt-1 rounded-lg border border-zinc-800 bg-zinc-950/80 p-3 text-xs space-y-2">
+          <div className="flex items-center gap-2 text-zinc-400">
+            <Search className="w-3 h-3" />
+            <span>Dossier raccolto da Atlas — usato per cucire la risposta su misura</span>
+          </div>
+          <div className="h-1.5 w-full bg-zinc-800 rounded overflow-hidden">
+            <div className={`h-full ${ready >= 65 ? "bg-emerald-500" : ready >= 35 ? "bg-amber-500" : "bg-zinc-500"}`} style={{ width: `${ready}%` }} />
+          </div>
+          {knownLabels.length === 0 ? (
+            <div className="text-zinc-500">Nessun fatto raccolto ancora. Continua a scrivere.</div>
+          ) : (
+            <div className="space-y-1">
+              {knownLabels.map((kl, i) => (
+                <div key={i} className="flex gap-2">
+                  <span className="text-zinc-500 shrink-0 min-w-[110px]">{kl.label}:</span>
+                  <span className="text-zinc-200">{kl.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {caseFile.attempts && caseFile.attempts.length > 0 && (
+            <div className="pt-1 border-t border-zinc-800">
+              <div className="text-zinc-500 mb-1">Già tentato:</div>
+              <ul className="space-y-0.5">
+                {caseFile.attempts.slice(-5).map((a, i) => (
+                  <li key={i} className="text-zinc-300">— {a}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {ready < 65 && (
+            <div className="pt-1 border-t border-zinc-800 text-amber-300/80">
+              Atlas sta ancora scavando. Servono altri fatti chiave per un piano cucito.
+            </div>
+          )}
+          {ready >= 65 && (
+            <div className="pt-1 border-t border-zinc-800 text-emerald-400/90">
+              Intel sufficiente: la prossima risposta sarà un piano cucito sul tuo caso.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ThinkingIndicator() {
   const [elapsed, setElapsed] = useState(0);
   const phases = [
@@ -219,6 +318,8 @@ export default function ChatTab({ sid }: { sid: string }) {
   const [profile, setProfile] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [isLocalMode, setIsLocalMode] = useState(false);
+  const [caseFile, setCaseFile] = useState<CaseFile | null>(null);
+  const [showDossier, setShowDossier] = useState(false);
   const pendingQueue = useRef<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -276,6 +377,10 @@ export default function ChatTab({ sid }: { sid: string }) {
           timestamp: Date.now(),
         }]);
       }
+      // Carica case file della conversazione (cloud o locale)
+      const cfId = cid || sid;
+      const cf = await loadCaseFile(cfId, "generic");
+      if (!cancelled) setCaseFile(cf);
     }
     initMessages();
     // Carica profilo
@@ -344,13 +449,42 @@ export default function ChatTab({ sid }: { sid: string }) {
       }
     }
 
+    // Estrai fatti dal messaggio utente prima di chiamare chat (sincrono per dare contesto)
+    let workingCase: CaseFile | null = caseFile;
+    if (workingCase) {
+      try {
+        // Aggiorna case file localmente (heuristic, sincrono); LLM extraction async dopo
+        const cfId = conversationId || sid;
+        const updated = await extractAndApplyLight(query, workingCase);
+        workingCase = updated;
+        setCaseFile(updated);
+        // Persisti in background
+        saveCaseFile(updated).catch(() => null);
+        // Chiamata server-side extract (LLM) in parallelo, salva quando torna
+        if (await isCloudUser()) {
+          fetch('/api/case', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ action: 'extract', conversationId: cfId, text: query }),
+          })
+            .then((r) => r.json())
+            .then((d) => {
+              if (d?.caseFile) setCaseFile(d.caseFile);
+            })
+            .catch(() => null);
+        }
+      } catch {
+        /* ignore extraction errors */
+      }
+    }
+
     // Conversazione normale
     try {
-      const history = await getLastMessages(sid, 6, conversationId);
+      const history = await getLastMessages(sid, 10, conversationId);
       const r = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ query, sessionId: sid, conversationHistory: history }),
+        body: JSON.stringify({ query, sessionId: sid, conversationHistory: history, caseFile: workingCase }),
       });
       if (!r.ok) throw new Error('chat_request_failed');
       const d = await r.json();
@@ -410,6 +544,7 @@ export default function ChatTab({ sid }: { sid: string }) {
             Modalità locale attiva: questa chat resta solo su questo dispositivo. Accedi o disattiva “salva in locale” per sincronizzare telefono e PC.
           </div>
         )}
+        <DossierBadge caseFile={caseFile} open={showDossier} onToggle={() => setShowDossier((v) => !v)} />
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
         {msgs.map((m, i) => (
           <div

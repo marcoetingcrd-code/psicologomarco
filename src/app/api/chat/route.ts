@@ -1,24 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { answer } from "@/lib/rag";
 import { recordQuery, predictNext, cacheAnswer, getCachedAnswer, recordInteraction, detectGaps } from "@/lib/profile";
+import type { CaseFile } from "@/lib/case-file";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json()) as { query: string; sessionId: string; deepMode?: boolean; conversationHistory?: { role: string; content: string }[] };
-  const { query, sessionId, deepMode, conversationHistory } = body;
+  const body = (await req.json()) as {
+    query: string;
+    sessionId: string;
+    deepMode?: boolean;
+    conversationHistory?: { role: string; content: string }[];
+    caseFile?: CaseFile | null;
+  };
+  const { query, sessionId, deepMode, conversationHistory, caseFile } = body;
   if (!query || !sessionId) {
     return NextResponse.json({ error: "missing query or sessionId" }, { status: 400 });
   }
 
-  // 1. Cache check
-  const cached = getCachedAnswer(query);
+  // 1. Cache check — solo per query GENERICHE (no caseFile, no history significativa)
+  // Risposte cucite sul caso non sono mai riusabili.
+  const useCache = !caseFile && (!conversationHistory || conversationHistory.length === 0);
+  const cached = useCache ? getCachedAnswer(query) : null;
   let result;
   if (cached) {
     result = { answer: cached, sources: [], usedLLM: true, cached: true };
   } else {
-    result = { ...(await answer(query, deepMode, sessionId, conversationHistory)), cached: false };
-    cacheAnswer(query, result.answer);
+    const ragResult = await answer(query, deepMode, sessionId, conversationHistory, caseFile);
+    result = { ...ragResult, cached: false };
+    if (useCache && !ragResult.safetyTriggered) {
+      cacheAnswer(query, result.answer);
+    }
   }
 
   // 2. Record in user profile

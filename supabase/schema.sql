@@ -202,3 +202,146 @@ begin
     set no_match_count = topic_gaps.no_match_count + 1,
         last_seen = now();
 end; $$;
+
+-- ============================================================================
+-- 7. CASE FILES (dossier strategico per conversazione, cifrato)
+-- ============================================================================
+create table if not exists public.case_files (
+  conversation_id uuid primary key references public.conversations(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  domain text not null default 'generic',
+  facts_encrypted text,
+  attempts_encrypted text,
+  open_questions_encrypted text,
+  pending_thread_encrypted text,
+  plan_encrypted text,
+  readiness int not null default 0,
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_case_files_user on public.case_files(user_id, updated_at desc);
+alter table public.case_files enable row level security;
+drop policy if exists "case_files_owner" on public.case_files;
+create policy "case_files_owner" on public.case_files
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 8. JOY EVENTS (eventi di gioia/successo rilevati, cifrati)
+-- ============================================================================
+create table if not exists public.joy_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  conversation_id uuid references public.conversations(id) on delete set null,
+  payload_encrypted text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_joy_events_user on public.joy_events(user_id, created_at desc);
+alter table public.joy_events enable row level security;
+drop policy if exists "joy_events_owner" on public.joy_events;
+create policy "joy_events_owner" on public.joy_events
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 9. JOY PROFILES (aggregato per utente, cifrato)
+-- ============================================================================
+create table if not exists public.joy_profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  payload_encrypted text not null,
+  total_events int not null default 0,
+  active boolean not null default false,
+  updated_at timestamptz not null default now()
+);
+alter table public.joy_profiles enable row level security;
+drop policy if exists "joy_profiles_owner" on public.joy_profiles;
+create policy "joy_profiles_owner" on public.joy_profiles
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 10. SOVEREIGN CONTRACTS (auto-vincolo firmato, cifrato)
+-- ============================================================================
+create table if not exists public.sovereign_contracts (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  payload_encrypted text not null,
+  signed_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  active boolean not null default true,
+  last_reconsent_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+alter table public.sovereign_contracts enable row level security;
+drop policy if exists "sov_contracts_owner" on public.sovereign_contracts;
+create policy "sov_contracts_owner" on public.sovereign_contracts
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 11. SOVEREIGN STATE (manipulation profile, excuse library, audit, cifrato)
+-- ============================================================================
+create table if not exists public.sovereign_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  manipulation_profile_encrypted text,
+  excuse_library_encrypted text,
+  reckoning_streak int not null default 0,
+  audit_misses int not null default 0,
+  last_audit_at timestamptz,
+  emergency_paused_until timestamptz,
+  updated_at timestamptz not null default now()
+);
+alter table public.sovereign_state enable row level security;
+drop policy if exists "sov_state_owner" on public.sovereign_state;
+create policy "sov_state_owner" on public.sovereign_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 12. SOVEREIGN LOG (log reckoning/audit/intervention/tribunal, cifrato)
+-- ============================================================================
+create table if not exists public.sovereign_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('reckoning','audit','intervention','tribunal','safety','reconsent')),
+  payload_encrypted text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_sov_log_user on public.sovereign_log(user_id, created_at desc);
+alter table public.sovereign_log enable row level security;
+drop policy if exists "sov_log_owner" on public.sovereign_log;
+create policy "sov_log_owner" on public.sovereign_log
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 13. HOOK STATE (streak, identity, threads, modules)
+-- ============================================================================
+create table if not exists public.hook_state (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  streak_days int not null default 0,
+  longest_streak int not null default 0,
+  last_seen_at timestamptz,
+  identity_handle text,
+  pending_threads_encrypted text,
+  ritual_morning_at time,
+  ritual_evening_at time,
+  hook_mode text not null default 'public' check (hook_mode in ('public','personal')),
+  modules_enabled jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table public.hook_state enable row level security;
+drop policy if exists "hook_state_owner" on public.hook_state;
+create policy "hook_state_owner" on public.hook_state
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Trigger updated_at su tutte le tabelle nuove
+do $$ begin
+  drop trigger if exists case_files_touch on public.case_files;
+  create trigger case_files_touch before update on public.case_files
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists joy_profiles_touch on public.joy_profiles;
+  create trigger joy_profiles_touch before update on public.joy_profiles
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists sov_contracts_touch on public.sovereign_contracts;
+  create trigger sov_contracts_touch before update on public.sovereign_contracts
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists sov_state_touch on public.sovereign_state;
+  create trigger sov_state_touch before update on public.sovereign_state
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists hook_state_touch on public.hook_state;
+  create trigger hook_state_touch before update on public.hook_state
+    for each row execute function public.touch_updated_at();
+end $$;
