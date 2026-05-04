@@ -20,6 +20,7 @@ import {
 } from "../lib/case-file";
 import { isSupabaseReady, getBrowserClient } from "../lib/supabase";
 import { type SovereignContract, isContractValid, loadContract, activeFronts } from "../lib/sovereign/contract";
+import { type StreakState, loadLocalStreak, pingStreak, saveLocalStreak, syncStreak } from "../lib/hook";
 import Link from "next/link";
 
 type SourceHit = {
@@ -182,8 +183,18 @@ async function isCloudUser(): Promise<boolean> {
   return !!data.session;
 }
 
-function CostOfFailureWidget({ contract }: { contract: SovereignContract | null }) {
-  if (!contract || !isContractValid(contract)) return null;
+function CostOfFailureWidget({ contract, streak }: { contract: SovereignContract | null; streak: StreakState | null }) {
+  if (!contract || !isContractValid(contract)) {
+    if (streak && streak.streakDays >= 2) {
+      return (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5 text-xs flex items-center gap-2 text-amber-300">
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>{streak.streakDays} giorni consecutivi con Atlas · record {streak.longestStreak}</span>
+        </div>
+      );
+    }
+    return null;
+  }
   const days = Math.max(0, Math.ceil((contract.expiresAt - Date.now()) / 86400000));
   const fronts = activeFronts(contract);
   return (
@@ -191,7 +202,7 @@ function CostOfFailureWidget({ contract }: { contract: SovereignContract | null 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-rose-300 font-medium">
           <Shield className="w-3.5 h-3.5" />
-          <span>Sovereign attivo · {days}gg residui · {fronts.length}/4 fronti</span>
+          <span>Sovereign attivo · {days}gg residui · {fronts.length}/4 fronti{streak && streak.streakDays >= 2 ? ` · streak ${streak.streakDays}` : ""}</span>
         </div>
         <ChevronDown className="w-3.5 h-3.5 text-rose-400 -rotate-90" />
       </div>
@@ -350,6 +361,7 @@ export default function ChatTab({ sid }: { sid: string }) {
   const [caseFile, setCaseFile] = useState<CaseFile | null>(null);
   const [showDossier, setShowDossier] = useState(false);
   const [contract, setContract] = useState<SovereignContract | null>(null);
+  const [streak, setStreak] = useState<StreakState | null>(null);
   const pendingQueue = useRef<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -419,6 +431,14 @@ export default function ChatTab({ sid }: { sid: string }) {
     }).catch(() => {});
     // Carica contract sovereign (best effort)
     loadContract().then((c) => setContract(c)).catch(() => null);
+    // Hook streak: ping locale immediato + sync cloud
+    const local = pingStreak(loadLocalStreak());
+    saveLocalStreak(local);
+    setStreak(local);
+    syncStreak(local).then((s) => {
+      saveLocalStreak(s);
+      setStreak(s);
+    }).catch(() => null);
     return () => { cancelled = true; };
   }, [sid]);
 
@@ -576,7 +596,7 @@ export default function ChatTab({ sid }: { sid: string }) {
             Modalità locale attiva: questa chat resta solo su questo dispositivo. Accedi o disattiva “salva in locale” per sincronizzare telefono e PC.
           </div>
         )}
-        <CostOfFailureWidget contract={contract} />
+        <CostOfFailureWidget contract={contract} streak={streak} />
         <DossierBadge caseFile={caseFile} open={showDossier} onToggle={() => setShowDossier((v) => !v)} />
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
         {msgs.map((m, i) => (
