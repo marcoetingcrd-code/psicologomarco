@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Brain, BookOpen, PenTool, ClipboardList, ListChecks, UserCircle, ArrowRight } from "lucide-react";
+import { CORPUS } from "../lib/corpus";
 import ChatTab from "./chat-tab";
 import JournalTab from "./journal-tab";
 import AssessmentTab from "./assessment-tab";
@@ -51,7 +52,7 @@ export default function Page() {
         <div className="flex items-center gap-3 shrink-0">
           <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-500">
             <BookOpen className="w-3.5 h-3.5" />
-            35 fonti
+            {CORPUS.length} fonti
           </div>
           <AuthHeader />
         </div>
