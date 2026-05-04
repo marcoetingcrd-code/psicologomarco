@@ -139,6 +139,46 @@ function SourcesChip({ sources }: { sources: SourceHit[] }) {
   );
 }
 
+function ThinkingIndicator() {
+  const [elapsed, setElapsed] = useState(0);
+  const [phaseIdx, setPhaseIdx] = useState(0);
+  const phases = [
+    "Cerco fonti rilevanti nel corpus…",
+    "Analizzo pattern psicologici e leve…",
+    "Anticipo il comportamento dell'altro…",
+    "Costruisco piano d'azione con timing…",
+    "Affilo la risposta…",
+  ];
+  useEffect(() => {
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  useEffect(() => {
+    const p = setInterval(() => setPhaseIdx((i) => (i + 1) % phases.length), 2200);
+    return () => clearInterval(p);
+  }, []);
+  const eta = Math.max(0, 8 - elapsed);
+  return (
+    <div className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-800 mr-8 space-y-2">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <div className="flex items-center gap-2 text-zinc-300">
+          <div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+          <span>{phases[phaseIdx]}</span>
+        </div>
+        <div className="text-xs text-zinc-500 tabular-nums shrink-0">
+          {eta > 0 ? `~${eta}s` : `${elapsed}s`}
+        </div>
+      </div>
+      <div className="h-1 w-full bg-zinc-800 rounded overflow-hidden">
+        <div
+          className="h-full bg-indigo-500 transition-all duration-1000"
+          style={{ width: `${Math.min(95, elapsed * 12)}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ChatTab({ sid }: { sid: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -357,14 +397,14 @@ export default function ChatTab({ sid }: { sid: string }) {
             )}
           </div>
         ))}
-        {load && <div className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-800 mr-8"><div className="flex items-center gap-2 text-zinc-400 text-sm"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" /><span>Atlas sta cercando e ragionando…</span></div></div>}
+        {load && <ThinkingIndicator />}
       </div>
       <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black to-transparent pt-6 pb-4 px-4">
         <div className="max-w-4xl mx-auto">
           {preds.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto pb-1">{preds.map((p, i) => <button key={i} onClick={() => send(p)} className="shrink-0 text-xs px-3 py-1.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 text-zinc-300"><Sparkles className="w-3 h-3 inline mr-1 text-indigo-400" />{p}</button>)}</div>}
           <form onSubmit={e => { e.preventDefault(); send(); }} className="flex gap-2">
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Chiedi qualcosa ad Atlas…" className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500" />
-            <button type="submit" disabled={load || !input.trim()} className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 font-medium text-sm flex items-center gap-2"><Send className="w-4 h-4" />Invia</button>
+            <input value={input} onChange={e => setInput(e.target.value)} placeholder={load ? "Scrivi il prossimo (sarà messo in coda)…" : "Chiedi qualcosa ad Atlas…"} className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm outline-none focus:border-indigo-500" />
+            <button type="submit" disabled={!input.trim()} className="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 font-medium text-sm flex items-center gap-2"><Send className="w-4 h-4" />{load ? "Coda" : "Invia"}</button>
           </form>
         </div>
       </div>
