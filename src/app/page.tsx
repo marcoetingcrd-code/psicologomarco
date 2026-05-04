@@ -5,6 +5,7 @@ import ChatTab from "./chat-tab";
 import JournalTab from "./journal-tab";
 import AssessmentTab from "./assessment-tab";
 import ProtocolTab from "./protocol-tab";
+import AuthHeader from "./auth-header";
 
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
@@ -40,7 +41,13 @@ export default function Page() {
             <p className="text-[11px] sm:text-xs text-zinc-400 truncate">Chat · Journal · Test · Piano</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-[11px] sm:text-xs text-zinc-400 shrink-0"><BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />35 fonti</div>
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-500">
+            <BookOpen className="w-3.5 h-3.5" />
+            35 fonti
+          </div>
+          <AuthHeader />
+        </div>
       </header>
       {profileComplete === false && (
         <div className="mb-3 sm:mb-4 rounded-xl bg-indigo-900/20 border border-indigo-500/30 p-3 sm:p-4 flex items-center justify-between gap-3">
