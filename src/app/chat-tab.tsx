@@ -48,17 +48,27 @@ Raccontami cosa sta succedendo concretamente: chi è coinvolto, cosa hai già pr
 function fallbackAnswerFor(query: string): string {
   const q = query.toLowerCase();
   if (/riattrar|riconquistar|mollat|lasciat|ex|chimica/i.test(q)) {
-    return `Ti rispondo subito in modo pratico: non provare a “riattrarla” inseguendola, spiegandoti troppo o cercando di convincerla. Dopo una rottura così, quello abbassa ancora di più la tua posizione.
+    return `Ecco cosa fai ora, senza fronzoli.
 
-La prima cosa da fare è fermare la rincorsa: niente messaggi lunghi, niente suppliche, niente richiesta continua di chiarimenti. Se vuoi avere una possibilità reale, devi tornare centrato.
+Primo: smetti di inseguirla. Ha fatto 1000 km per lasciarti dopo 2 anni e mezzo, dicendo "non c'è più chimica". Questo significa che tu sei investito e lei si è disinvestita da tempo. Più la insegui, più lei si allontana. Il cervello umano perde interesse per ciò che è troppo disponibile.
 
-Mandale al massimo un messaggio breve e adulto, tipo: “Ho capito quello che mi hai detto. Non ti inseguo né ti forzo. Mi prendo spazio anch’io per metabolizzare.” Poi sparisci per un po’.
+Lei si aspetta che tu pianga, che tu la chiami, che tu le scriva romanzi. Non farlo. Rompi l'aspettativa.
 
-Nel frattempo lavora su tre cose: lucidità, dignità e attrattività reale. Allenati, dormi, non controllarla, non mendicare segnali. Se lei torna, deve percepire che non sei lì ad aspettare briciole. Se non torna, almeno non ti sei distrutto per qualcuno che ti ha lasciato dopo averti fatto fare 1000 km.`;
+Mandale questo solo messaggio, poi sparisci per almeno 3 settimane: "Ho capito. Mi prendo il mio spazio per metabolizzare. Non ti scriverò." Non aggiungere "ci vediamo", non aggiungere "ti voglio bene". Fine.
+
+Cosa farà lei: le prime 48 ore starà meglio, si sentirà libera. Poi inizierà a sentire il buco. Ti controllerà i social. Vedere che sei vivo, che non stai piangendo, che forse ti stai muovendo, la metterà in crisi.
+
+Nel frattempo tu fai così: palestra ogni giorno, anche 30 minuti. Posta una foto dove fai qualcosa nuovo, non forzata, non per lei, ma per te. Non la bloccare, non la eliminare, non le dare segnali di dramma. Devi sembrare qualcuno che ha accettato e si sta muovendo.
+
+Se dopo 3 settimane ti contatta, non saltare. Rispondi dopo ore, breve, adulto. Non parlare di sentimenti, non parlare del passato. Se ti chiede "come stai", rispondi "bene, mi sto concentrando su qualcosa di nuovo". Mistero. Curiosità. Quello che lei ha perso.
+
+Se non ti contatta dopo 3 settimane, puoi mandare un messaggio leggero su qualcosa concreto, non emotivo. Tipo: "Ho trovato quel libro che mi chiedevi, se ti serve te lo lascio da Marco". Fine. Non seguito. Se lei morde, va avanti piano. Se non morde, hai la tua risposta.
+
+La regola d'oro: chi torna indietro lo fa perché percepisce che l'altro è diventato più interessante, non perché l'altro supplica.`;
   }
-  return `Ti rispondo senza tecnicismi: ho avuto un problema a recuperare la risposta completa, ma non voglio lasciarti con un errore vuoto.
+  return `Ho avuto un problema tecnico ma non ti lascio a mani vuote.
 
-Per aiutarti bene mi serve una cosa concreta: dimmi cosa è successo, cosa vuoi ottenere e qual è il punto che ti sta bloccando di più. Da lì ti do una linea d'azione pratica, non generica.`;
+Raccontami in due righe: cosa è successo, cosa vuoi ottenere, e qual è il blocco principale. Da lì ti do una linea d'azione diretta.`;
 }
 
 function cleanMarkdown(text: string): string {
