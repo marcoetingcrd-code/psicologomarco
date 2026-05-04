@@ -125,6 +125,7 @@ export default function ChatTab({ sid }: { sid: string }) {
   const [profile, setProfile] = useState<any>(null);
   const [conversationId, setConversationId] = useState<string | undefined>(undefined);
   const [isLocalMode, setIsLocalMode] = useState(false);
+  const pendingQueue = useRef<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetch(`/api/predict?sessionId=${sid}`).then(r => r.json()).then(d => setPreds(d.predictions ?? [])); }, [sid]);
