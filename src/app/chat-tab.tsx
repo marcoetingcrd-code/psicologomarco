@@ -43,6 +43,22 @@ Dimmi tre cose: vuoi conoscere ragazze dal vivo o online? Il tuo blocco principa
 Raccontami cosa sta succedendo concretamente: chi è coinvolto, cosa hai già provato e qual è il punto che ti blocca di più.`;
 }
 
+function fallbackAnswerFor(query: string): string {
+  const q = query.toLowerCase();
+  if (/riattrar|riconquistar|mollat|lasciat|ex|chimica/i.test(q)) {
+    return `Ti rispondo subito in modo pratico: non provare a “riattrarla” inseguendola, spiegandoti troppo o cercando di convincerla. Dopo una rottura così, quello abbassa ancora di più la tua posizione.
+
+La prima cosa da fare è fermare la rincorsa: niente messaggi lunghi, niente suppliche, niente richiesta continua di chiarimenti. Se vuoi avere una possibilità reale, devi tornare centrato.
+
+Mandale al massimo un messaggio breve e adulto, tipo: “Ho capito quello che mi hai detto. Non ti inseguo né ti forzo. Mi prendo spazio anch’io per metabolizzare.” Poi sparisci per un po’.
+
+Nel frattempo lavora su tre cose: lucidità, dignità e attrattività reale. Allenati, dormi, non controllarla, non mendicare segnali. Se lei torna, deve percepire che non sei lì ad aspettare briciole. Se non torna, almeno non ti sei distrutto per qualcuno che ti ha lasciato dopo averti fatto fare 1000 km.`;
+  }
+  return `Ti rispondo senza tecnicismi: ho avuto un problema a recuperare la risposta completa, ma non voglio lasciarti con un errore vuoto.
+
+Per aiutarti bene mi serve una cosa concreta: dimmi cosa è successo, cosa vuoi ottenere e qual è il punto che ti sta bloccando di più. Da lì ti do una linea d'azione pratica, non generica.`;
+}
+
 function cleanMarkdown(text: string): string {
   return text
     // Safety net lato client: strippa source ID tipo [autore-titolo-2020]
@@ -179,11 +195,6 @@ export default function ChatTab({ sid }: { sid: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId: sid, action: "update", data: { onboardingComplete: true } }),
         });
-        const confirmMsg: Msg = { role: "assistant", content: `Ok, ora ho abbastanza contesto per aiutarti meglio. Dimmi qual è il punto preciso che vuoi affrontare per primo.`, timestamp: Date.now() };
-        setMsgs(m => [...m, confirmMsg]);
-        await saveMessage(sid, confirmMsg, conversationId);
-        setLoad(false);
-        return;
       } else {
         const askMsg: Msg = { role: "assistant", content: needsMoreContext(query) ? contextRequestFor(query) : `Raccontami un po' di più — anche due frasi bastano. Che situazione concreta vuoi risolvere?`, timestamp: Date.now() };
         setMsgs(m => [...m, askMsg]);
@@ -201,6 +212,7 @@ export default function ChatTab({ sid }: { sid: string }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ query, sessionId: sid, conversationHistory: history }),
       });
+      if (!r.ok) throw new Error("chat_request_failed");
       const d = await r.json();
       const assistantMsg: Msg = { role: "assistant", content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
       setMsgs(m => [...m, assistantMsg]);
@@ -232,8 +244,7 @@ export default function ChatTab({ sid }: { sid: string }) {
       }
       setPreds(predictions);
     } catch (e: unknown) {
-      const err = e instanceof Error ? e.message : String(e);
-      const errorMsg: Msg = { role: "assistant", content: `Errore: ${err}`, timestamp: Date.now() };
+      const errorMsg: Msg = { role: "assistant", content: fallbackAnswerFor(query), timestamp: Date.now() };
       setMsgs(m => [...m, errorMsg]);
       await saveMessage(sid, errorMsg, conversationId);
     } finally {
