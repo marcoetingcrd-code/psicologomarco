@@ -134,7 +134,32 @@ export default function ChatTab({ sid }: { sid: string }) {
       const assistantMsg: Msg = { role: "assistant", content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
       setMsgs(m => [...m, assistantMsg]);
       saveMessage(sid, assistantMsg);
-      setPreds(d.predictions ?? []);
+
+      // Smart profile probing: ogni 3 turni, se profilo incompleto, aggiungi
+      // una mini-domanda profilante alle predizioni (chip cliccabile, mai bloccante)
+      let predictions: string[] = d.predictions ?? [];
+      const turnCount = msgs.filter((x) => x.role === "user").length + 1;
+      if (turnCount % 3 === 0) {
+        try {
+          const gapsRes = await fetch("/api/profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId: sid, action: "gaps", data: { query } }),
+          });
+          const gapsData = await gapsRes.json();
+          const topGap = gapsData?.gaps?.[0];
+          if (topGap?.question) {
+            predictions = [`💭 ${topGap.question}`, ...predictions].slice(0, 5);
+            // Marca lo slot come probato per non riproporre subito
+            fetch("/api/profile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId: sid, action: "markProbed", data: { slot: topGap.slot } }),
+            }).catch(() => {});
+          }
+        } catch {}
+      }
+      setPreds(predictions);
     } catch (e: unknown) {
       const err = e instanceof Error ? e.message : String(e);
       const errorMsg: Msg = { role: "assistant", content: `Errore: ${err}`, timestamp: Date.now() };
