@@ -17,9 +17,22 @@ type SourceHit = {
 };
 type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sources?: SourceHit[]; cached?: boolean; usedLLM?: boolean };
 
+function isGenericExRecovery(query: string): boolean {
+  const q = query.toLowerCase();
+  const exIntent = /\b(ex\b|riconquist|riattrar|riprender.*(lei|lui)|tornar.*(con|insieme)|recuperar.*(rapport|relazione|lei|lui|ex)|mi ha (lasciat|mollat)|lasciat.*(da|dal|dalla)|conquistar.*(ex|lei)|rottura)/i.test(q);
+  if (!exIntent) return false;
+  // Contesto necessario: durata rapporto, quando è successo, motivo, ultimo contatto
+  const hasDuration = /\b(\d+\s*(anni|anno|mesi|mese|settiman|giorn))/i.test(q);
+  const hasWhen = /(ieri|oggi|stamattina|stasera|settimana|mese fa|giorni fa|anno fa|mesi fa|recentemente|appena)/i.test(q);
+  const hasReason = /(detto|tradit|chimica|cresciuti|cambiat|stanca|stanco|distanz|altro|altra|noia|litig|discuss|non sentiv|non funzionav)/i.test(q);
+  const hasContact = /(blocc|sentit|scritt|chiamat|vist|risposta|risponde|ignora|ghost)/i.test(q);
+  const enoughContext = [hasDuration, hasWhen, hasReason, hasContact].filter(Boolean).length >= 2;
+  return !enoughContext && q.length < 250;
+}
+
 function isGenericDatingQuestion(query: string): boolean {
   const q = query.toLowerCase();
-  const datingIntent = /rimorchiare|rimorchio|sedurre|seduzione|approcciare|approccio|conquistare|ragazza|donne|dating|flirt|uscire con/i.test(q);
+  const datingIntent = /rimorchiare|rimorchio|sedurre|seduzione|approcciare|approccio|conquistare(?!.*\bex\b)|ragazza|donne|dating|flirt|uscire con/i.test(q);
   if (!datingIntent) return false;
   const hasConcreteContext = /instagram|tinder|appuntamento|chat|messaggi|locale|discoteca|bar|palestra|lavoro|università|scuola|ex|rifiut|ansia|timidezza|lei|nome|ieri|domani|stasera|settimana/i.test(q);
   return !hasConcreteContext && q.length < 120;
@@ -27,6 +40,7 @@ function isGenericDatingQuestion(query: string): boolean {
 
 function needsMoreContext(query: string): boolean {
   const q = query.toLowerCase();
+  if (isGenericExRecovery(q)) return true;
   if (isGenericDatingQuestion(q)) return true;
   const genericIntent = /come faccio|come posso|dammi strategie|guidami|aiutami|consiglio/i.test(q);
   const broadTopic = /soldi|business|lavoro|carriera|forma|dimagrire|palestra|relazione|fidanzata|ex|disciplina|motivazione|smettere/i.test(q);
@@ -35,6 +49,16 @@ function needsMoreContext(query: string): boolean {
 }
 
 function contextRequestFor(query: string): string {
+  if (isGenericExRecovery(query)) {
+    return `Ok, ti aiuto a riconquistarla — ma se ti do un piano alla cieca rischio di farti fare le mosse sbagliate. Mi servono 4 informazioni precise, poi costruisco la strategia su misura.
+
+1) Da quanto tempo stavate insieme e quando vi siete lasciati esattamente?
+2) Cosa ti ha detto precisamente nel lasciarti? (Le sue parole, anche brutte: "non sento più niente", "c'è un altro", "non sei tu sono io", ecc.)
+3) Quando è stato l'ultimo contatto e chi ha scritto per ultimo? L'hai inseguita dopo la rottura (messaggi, chiamate, tentativi)?
+4) C'è di mezzo un'altra persona o lei è single ora? E voi vivete vicini o lontani?
+
+Rispondimi anche solo con righe brevi, una per ogni punto. Da queste 4 cose capisco se la situazione è recuperabile, con che tempi e con quale leva muoverti per prima.`;
+  }
   if (isGenericDatingQuestion(query)) {
     return `Prima di darti strategie devo capire meglio la situazione, altrimenti ti darei consigli generici.
 
@@ -278,11 +302,18 @@ export default function ChatTab({ sid }: { sid: string }) {
       const askMsg: Msg = { role: 'assistant', content: contextRequestFor(query), timestamp: Date.now() };
       setMsgs(m => [...m, askMsg]);
       await saveMessage(sid, askMsg, conversationId);
-      setPreds(isGenericDatingQuestion(query) ? [
-        'Voglio conoscere ragazze dal vivo ma mi blocco ad approcciare',
-        'Uso Instagram/Tinder ma le conversazioni muoiono subito',
-        'Ho paura del rifiuto e non so come comportarmi',
-      ] : []);
+      setPreds(
+        isGenericExRecovery(query) ? [
+          'Stavamo insieme 2 anni, mi ha lasciato 2 settimane fa dicendo che non c\'è più chimica',
+          'Ci siamo lasciati il mese scorso, le ho scritto tante volte ma non risponde',
+          'Mi ha mollato per un altro, ultimo contatto 3 giorni fa quando l\'ho chiamata',
+          'Stavamo insieme 5 anni, non so se è recuperabile, l\'ho bloccata io',
+        ] : isGenericDatingQuestion(query) ? [
+          'Voglio conoscere ragazze dal vivo ma mi blocco ad approcciare',
+          'Uso Instagram/Tinder ma le conversazioni muoiono subito',
+          'Ho paura del rifiuto e non so come comportarmi',
+        ] : []
+      );
       setLoad(false);
       processQueue();
       return;
