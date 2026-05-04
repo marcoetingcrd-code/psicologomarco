@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogIn, LogOut, Settings, Cloud, CloudOff } from "lucide-react";
+import { LogIn, LogOut, Settings, Cloud, CloudOff, Brain, Shield } from "lucide-react";
 import { getBrowserClient, isSupabaseReady } from "../lib/supabase";
 
 export default function AuthHeader() {
@@ -60,6 +60,20 @@ export default function AuthHeader() {
         <Cloud className="w-3.5 h-3.5 text-emerald-400" />
         <span className="truncate max-w-[160px]">{email}</span>
       </div>
+      <Link
+        href="/mind"
+        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-indigo-300"
+        title="La mente di Atlas (Knowledge Graph)"
+      >
+        <Brain className="w-3.5 h-3.5" />
+      </Link>
+      <Link
+        href="/sovereign"
+        className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-rose-300"
+        title="Sovereign Contract"
+      >
+        <Shield className="w-3.5 h-3.5" />
+      </Link>
       <Link
         href="/settings"
         className="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400"

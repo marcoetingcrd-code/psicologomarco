@@ -327,10 +327,94 @@ drop policy if exists "hook_state_owner" on public.hook_state;
 create policy "hook_state_owner" on public.hook_state
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- ============================================================================
+-- 14. KNOWLEDGE GRAPH — entità (persone, eventi, atteggiamenti, pattern, traumi)
+-- ============================================================================
+create table if not exists public.kg_entities (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null check (kind in ('person','event','attitude','pattern','trauma','goal','failure','place','resource','belief')),
+  category text not null,             -- macro: relationships, family, work, body, trauma, identity, money, fear, power, addiction, generic
+  label text not null,                -- "Marta", "padre", "nervosismo da lavoro" (cifratura non strict, è già lato user RLS)
+  aliases_encrypted text,             -- altri nomi/forme per merge (cifrato JSON array)
+  attributes_encrypted text,          -- JSON cifrato: { role, traits, age?, dates?, intensity, salience, ... }
+  first_seen_at timestamptz not null default now(),
+  last_mentioned_at timestamptz not null default now(),
+  mention_count int not null default 1,
+  importance smallint not null default 50, -- 0..100
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_kg_entities_user on public.kg_entities(user_id, last_mentioned_at desc);
+create index if not exists idx_kg_entities_user_cat on public.kg_entities(user_id, category);
+create index if not exists idx_kg_entities_user_kind on public.kg_entities(user_id, kind);
+alter table public.kg_entities enable row level security;
+drop policy if exists "kg_entities_owner" on public.kg_entities;
+create policy "kg_entities_owner" on public.kg_entities
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 15. KG RELATIONS — archi tra entità
+-- ============================================================================
+create table if not exists public.kg_relations (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  source_id uuid not null references public.kg_entities(id) on delete cascade,
+  target_id uuid not null references public.kg_entities(id) on delete cascade,
+  kind text not null check (kind in ('causes','blocks','repeats','links_to','boycotts','triggers','heals','resembles','part_of','involves')),
+  detail_encrypted text,              -- breve descrizione cifrata
+  weight smallint not null default 50,
+  first_seen_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  evidence_count int not null default 1,
+  updated_at timestamptz not null default now(),
+  unique (user_id, source_id, target_id, kind)
+);
+create index if not exists idx_kg_rel_user on public.kg_relations(user_id);
+create index if not exists idx_kg_rel_source on public.kg_relations(source_id);
+create index if not exists idx_kg_rel_target on public.kg_relations(target_id);
+alter table public.kg_relations enable row level security;
+drop policy if exists "kg_relations_owner" on public.kg_relations;
+create policy "kg_relations_owner" on public.kg_relations
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================================
+-- 16. KG PATTERNS — pattern derivati (ripetizioni, boicottaggi)
+-- ============================================================================
+create table if not exists public.kg_patterns (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  signature text not null,            -- hash deterministico del pattern (per dedup)
+  kind text not null check (kind in ('repetition','boycott','conflict','reinforcement')),
+  title text not null,                -- "Schema: nervosismo da lavoro → perdita relazione"
+  summary_encrypted text not null,    -- spiegazione del pattern (cifrato)
+  involved_entity_ids uuid[] not null default '{}',
+  category text not null,
+  strength smallint not null default 50, -- 0..100
+  first_detected_at timestamptz not null default now(),
+  last_reinforced_at timestamptz not null default now(),
+  evidence_count int not null default 2,
+  updated_at timestamptz not null default now(),
+  unique (user_id, signature)
+);
+create index if not exists idx_kg_patterns_user on public.kg_patterns(user_id, strength desc);
+alter table public.kg_patterns enable row level security;
+drop policy if exists "kg_patterns_owner" on public.kg_patterns;
+create policy "kg_patterns_owner" on public.kg_patterns
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 -- Trigger updated_at su tutte le tabelle nuove
 do $$ begin
   drop trigger if exists case_files_touch on public.case_files;
   create trigger case_files_touch before update on public.case_files
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists kg_entities_touch on public.kg_entities;
+  create trigger kg_entities_touch before update on public.kg_entities
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists kg_relations_touch on public.kg_relations;
+  create trigger kg_relations_touch before update on public.kg_relations
+    for each row execute function public.touch_updated_at();
+  drop trigger if exists kg_patterns_touch on public.kg_patterns;
+  create trigger kg_patterns_touch before update on public.kg_patterns
     for each row execute function public.touch_updated_at();
   drop trigger if exists joy_profiles_touch on public.joy_profiles;
   create trigger joy_profiles_touch before update on public.joy_profiles

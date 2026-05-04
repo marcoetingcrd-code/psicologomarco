@@ -11,6 +11,7 @@ import {
 } from "./case-file";
 import { detectSafety, safetyResponse } from "./sovereign/safety";
 import { buildSovereignDecision, type SovereignContext } from "./sovereign/orchestrator";
+import { summarizeKg, type KgSnapshot } from "./kg/summarize";
 
 export interface RagResult {
   answer: string;
@@ -89,6 +90,7 @@ export async function answer(
   conversationHistory?: { role: string; content: string }[],
   caseFile?: CaseFile | null,
   sovereignCtx?: SovereignContext | null,
+  kgSnapshot?: KgSnapshot | null,
 ): Promise<RagResult> {
   // 1. SAFETY BRAKE — sempre prima di tutto, non disattivabile.
   const safety = detectSafety(query);
@@ -112,6 +114,15 @@ export async function answer(
       .slice(-10)
       .map((m) => `${m.role === "user" ? "Utente" : "Atlas"}: ${m.content}`)
       .join("\n\n") + "\n\n---\n\n";
+  }
+
+  // 3b. Knowledge Graph context (mente a polipo)
+  let kgContext = "";
+  if (kgSnapshot && kgSnapshot.entities.length > 0) {
+    const kgSummary = summarizeKg(kgSnapshot);
+    if (kgSummary) {
+      kgContext = `${kgSummary}\n\nUSO DEL KG: aggancia la tua risposta a entità/pattern del grafo se rilevanti. Se vedi che la domanda attuale collega a un pattern noto, NOMINALO esplicitamente ("è lo stesso schema che si è ripetuto con X e Y"). Non elencare il grafo, usalo come specchio per leggere il presente.\n\n---\n\n`;
+    }
   }
 
   // 4. Case file context (dossier strategico)
@@ -167,7 +178,7 @@ export async function answer(
       }
     }
 
-    let prompt = `${sovereignBlock}${caseContext}${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare):\n${engineAnswer}\n\n${modeInstructions}\n\nISTRUZIONI GENERALI:\n- Mantieni il tema della risposta base. NON deviare.\n- Parla come stratega diretto, affilato. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", niente bibliografia, niente nomi di studiosi.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Quando dai un piano: mosse numerate, ognuna con segnale di verifica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.\n${cliffhangerInstruction}`;
+    let prompt = `${sovereignBlock}${kgContext}${caseContext}${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare):\n${engineAnswer}\n\n${modeInstructions}\n\nISTRUZIONI GENERALI:\n- Mantieni il tema della risposta base. NON deviare.\n- Parla come stratega diretto, affilato. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", niente bibliografia, niente nomi di studiosi.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Quando dai un piano: mosse numerate, ognuna con segnale di verifica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.\n${cliffhangerInstruction}`;
     if (sessionId) {
       prompt += enforceAnswerConstraint(sessionId);
     }
