@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp, FileText, Search } from "lucide-react";
+import { Send, Sparkles, Brain, BookOpen, ChevronDown, ChevronUp, FileText, Search, Shield } from "lucide-react";
 import {
   createConversation,
   getCurrentUser,
@@ -19,6 +19,8 @@ import {
   DOMAIN_SLOTS,
 } from "../lib/case-file";
 import { isSupabaseReady, getBrowserClient } from "../lib/supabase";
+import { type SovereignContract, isContractValid, loadContract, activeFronts } from "../lib/sovereign/contract";
+import Link from "next/link";
 
 type SourceHit = {
   source: { id: string; authors: string; year: number; title: string; venue?: string; library?: string };
@@ -180,6 +182,33 @@ async function isCloudUser(): Promise<boolean> {
   return !!data.session;
 }
 
+function CostOfFailureWidget({ contract }: { contract: SovereignContract | null }) {
+  if (!contract || !isContractValid(contract)) return null;
+  const days = Math.max(0, Math.ceil((contract.expiresAt - Date.now()) / 86400000));
+  const fronts = activeFronts(contract);
+  return (
+    <Link href="/sovereign" className="block rounded-lg border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 p-3 text-xs space-y-1.5 transition">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 text-rose-300 font-medium">
+          <Shield className="w-3.5 h-3.5" />
+          <span>Sovereign attivo · {days}gg residui · {fronts.length}/4 fronti</span>
+        </div>
+        <ChevronDown className="w-3.5 h-3.5 text-rose-400 -rotate-90" />
+      </div>
+      {contract.failureCost && (
+        <div className="text-rose-200/80 line-clamp-2">
+          <span className="text-rose-400/70">Se molli: </span>{contract.failureCost}
+        </div>
+      )}
+      {contract.identityCommitment && (
+        <div className="text-zinc-400 line-clamp-1">
+          <span className="text-zinc-500">Identità: </span>{contract.identityCommitment}
+        </div>
+      )}
+    </Link>
+  );
+}
+
 function DossierBadge({
   caseFile,
   onToggle,
@@ -320,6 +349,7 @@ export default function ChatTab({ sid }: { sid: string }) {
   const [isLocalMode, setIsLocalMode] = useState(false);
   const [caseFile, setCaseFile] = useState<CaseFile | null>(null);
   const [showDossier, setShowDossier] = useState(false);
+  const [contract, setContract] = useState<SovereignContract | null>(null);
   const pendingQueue = useRef<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -387,6 +417,8 @@ export default function ChatTab({ sid }: { sid: string }) {
     fetch(`/api/profile?sessionId=${sid}`).then(r => r.json()).then(d => {
       if (d.profile) setProfile(d.profile);
     }).catch(() => {});
+    // Carica contract sovereign (best effort)
+    loadContract().then((c) => setContract(c)).catch(() => null);
     return () => { cancelled = true; };
   }, [sid]);
 
@@ -544,6 +576,7 @@ export default function ChatTab({ sid }: { sid: string }) {
             Modalità locale attiva: questa chat resta solo su questo dispositivo. Accedi o disattiva “salva in locale” per sincronizzare telefono e PC.
           </div>
         )}
+        <CostOfFailureWidget contract={contract} />
         <DossierBadge caseFile={caseFile} open={showDossier} onToggle={() => setShowDossier((v) => !v)} />
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
         {msgs.map((m, i) => (

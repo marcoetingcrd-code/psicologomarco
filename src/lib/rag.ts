@@ -10,6 +10,7 @@ import {
   summarizeCaseFile,
 } from "./case-file";
 import { detectSafety, safetyResponse } from "./sovereign/safety";
+import { buildSovereignDecision, type SovereignContext } from "./sovereign/orchestrator";
 
 export interface RagResult {
   answer: string;
@@ -86,7 +87,8 @@ export async function answer(
   deepMode = false,
   sessionId?: string,
   conversationHistory?: { role: string; content: string }[],
-  caseFile?: CaseFile | null
+  caseFile?: CaseFile | null,
+  sovereignCtx?: SovereignContext | null,
 ): Promise<RagResult> {
   // 1. SAFETY BRAKE — sempre prima di tutto, non disattivabile.
   const safety = detectSafety(query);
@@ -130,6 +132,11 @@ export async function answer(
     return { answer: deepAnswer, sources: hits, usedLLM: false, readiness: caseFile?.readiness };
   }
 
+  // 5b. Sovereign decision (voice + leve + identity + excuse) — dopo case file, prima del prompt
+  const sov = sovereignCtx
+    ? buildSovereignDecision(query, sovereignCtx)
+    : null;
+
   // 6. Costruzione prompt finale
   if (hasGemini()) {
     let modeInstructions = "";
@@ -148,12 +155,26 @@ export async function answer(
     // Cliffhanger: chiedi a Gemini di chiudere con un seed di curiosità SE ha materiale reale.
     const cliffhangerInstruction = `Concludi (se pertinente) con UNA frase massimo di curiosity gap su qualcosa di SPECIFICO che hai notato e che approfondirai la prossima volta — mai inventato, solo se hai un osservazione reale dal dossier o dalla conversazione. Se non hai nulla di reale, NON forzare e chiudi normalmente.`;
 
-    let prompt = `${caseContext}${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare):\n${engineAnswer}\n\n${modeInstructions}\n\nISTRUZIONI GENERALI:\n- Mantieni il tema della risposta base. NON deviare.\n- Parla come stratega diretto, affilato. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", niente bibliografia, niente nomi di studiosi.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Quando dai un piano: mosse numerate, ognuna con segnale di verifica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.\n${cliffhangerInstruction}`;
+    // Sovereign blocks (sopra il dossier per priorità cognitiva del modello)
+    let sovereignBlock = "";
+    if (sov) {
+      const allBlocks = sov.promptBlocks.join("\n\n");
+      const allInstr = sov.promptInstructions.length > 0
+        ? `\nISTRUZIONI SOVEREIGN:\n${sov.promptInstructions.map((i) => `- ${i}`).join("\n")}`
+        : "";
+      if (allBlocks || allInstr) {
+        sovereignBlock = `${allBlocks}${allInstr}\n\n---\n\n`;
+      }
+    }
+
+    let prompt = `${sovereignBlock}${caseContext}${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare):\n${engineAnswer}\n\n${modeInstructions}\n\nISTRUZIONI GENERALI:\n- Mantieni il tema della risposta base. NON deviare.\n- Parla come stratega diretto, affilato. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", niente bibliografia, niente nomi di studiosi.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Quando dai un piano: mosse numerate, ognuna con segnale di verifica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.\n${cliffhangerInstruction}`;
     if (sessionId) {
       prompt += enforceAnswerConstraint(sessionId);
     }
+    // Voice system: se sovereign attivo o sovereignCtx fornito con voice, usa quello; altrimenti SYSTEM default
+    const systemMessage = sov ? `${sov.voiceSystemMessage}\n\n${SYSTEM}` : SYSTEM;
     try {
-      const text = await generate(prompt, SYSTEM);
+      const text = await generate(prompt, systemMessage);
       return {
         answer: sanitizeOutput(text),
         sources: hits,
