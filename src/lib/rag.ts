@@ -97,7 +97,7 @@ export async function answer(
   if (hasGemini()) {
     // Note per LLM: il testo interno può contenere source ID tra [parentesi quadre].
     // L'LLM deve assolutamente rimuoverli, non ripeterli.
-    let prompt = `${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nSPUNTI INTERNI (usa per sostanza, NON copiare testualmente, NON mostrare codici tra quadre, NON citare fonti nella risposta — il ragionamento è interno, la conversazione è naturale):\n${engineAnswer}\n\nRISPONDI come Atlas: stratega diretto, affilato, senza fronzoli. Conversazione naturale, non manuale. Non citare fonti, non dire "come dice X", non fare bibliografia. Il ragionamento è tuo, la risposta è fluida. Focalizzati su QUESTA singola domanda. Anticipa comportamenti, spiega meccanismi, dà piano d'azione con timing. Zero codici [xxx-yyy-2020]. Zero markdown.`;
+    let prompt = `${conversationContext}DOMANDA UTENTE ATTUALE:\n${query}\n\nRISPOSTA BASE DA USARE COME FONDAMENTA (NON cambiare tema, NON sostituire argomento, NON inventare: questa è la linea strategica che Atlas deve seguire, la puoi rifinire ma il contenuto e l'angolo restano questi):\n${engineAnswer}\n\nISTRUZIONI DI RIFINITURA:\n- Mantieni ESATTAMENTE il tema della risposta base: se parla di ex/riconquista, tu parli di ex/riconquista; se parla di alcol, tu parli di alcol. NON deviare.\n- Parla come stratega diretto, affilato, senza fronzoli. Conversazione naturale, non manuale.\n- NON citare fonti, non dire "come dice X", non fare bibliografia.\n- Anticipa il comportamento dell'altra persona con timing preciso (giorni, settimane).\n- Dai mosse numerate e concrete, con cosa aspettarti a ogni step.\n- Lunga se serve (l'utente vuole guida dettagliata), mai generica.\n- Zero codici [xxx-yyy-2020]. Zero markdown. Zero elenchi puntati con asterischi.`;
     if (sessionId) {
       prompt += enforceAnswerConstraint(sessionId);
     }
@@ -125,6 +125,7 @@ function atlasEngine(
 
   // Rileva il tema dominante (priorità, first-match-only)
   type Theme =
+    | "ex_recovery"
     | "alcol"
     | "fumo"
     | "trauma"
@@ -139,8 +140,10 @@ function atlasEngine(
     | "generic";
 
   const detectTheme = (): Theme => {
-    // Priorità MASSIMA: topic molto specifici (fitness, business) che potrebbero
-    // contenere parole generiche come "bere" ma non sono la domanda principale
+    // PRIORITÀ ASSOLUTA: riconquista/ex/rottura → deve vincere su tutti gli altri
+    if (/\b(ex\b|riconquist|riattrar|riprender.*(lei|lui)|tornar.*(con|insieme)|recuperar.*(rapport|relazione|lei|lui|ex)|mi ha (lasciat|mollat)|lasciat.*(da|dal|dalla)|mollat.*(da|dal|dalla)|conquistar.*(ex|lei|ragazza|donna)|rottura|rottur)/i.test(q))
+      return "ex_recovery";
+    // Priorità ALTA: topic molto specifici (fitness, business)
     if (/\b(chil[oi]|kg|dimagrire|peso(\s|$)|palestra|muscol|allenament|flessioni|cardio|dieta)\b/i.test(q))
       return "fitness";
     if (/\b(startup|mvp|imprend|carriera|fatturato|vendita|marketing|investir)/i.test(q))
@@ -155,9 +158,9 @@ function atlasEngine(
     if (/\b(fumare|sigaretta|fumo\b|nicotin|svapo)/i.test(q)) return "fumo";
     if (/\b(trauma|infanzia|abuso|ace\b|ferita|padre|madre|mamma|papà)/i.test(q)) return "trauma";
     if (/\b(ansia|panico|attacco di|angosci|tensione)/i.test(q)) return "ansia";
-    if (/\b(ragazz|moglie|marito|partner|relazione|coppia|fidanzat|amore|ex\b|riconquist)/i.test(q))
+    if (/\b(ragazz|moglie|marito|partner|relazione|coppia|fidanzat|amore)/i.test(q))
       return "relazione";
-    if (/\b(sedurre|approcciare|flirt|donne\b|\bsingle\b|incontri|dating)/i.test(q))
+    if (/\b(rimorchiar|sedurre|approcciare|flirt|donne\b|\bsingle\b|incontri|dating|conquistar)/i.test(q))
       return "seduzione";
     if (/\b(abitudin|routine|produttiv|\bfocus\b|studio|concentrazione|deep work|distrazione)/i.test(q))
       return "abitudine";
@@ -173,6 +176,28 @@ function atlasEngine(
   // Per ogni tema, una risposta concisa, conversazionale, UN consiglio concreto.
   // Il testo sarà poi riscritto da Gemini se disponibile; altrimenti va direttamente all'utente.
   const advices: Record<Theme, string> = {
+    ex_recovery: `Ok, ti guido passo passo — è esattamente quello che ti serve in questo momento.
+
+Prima regola assoluta: smetti di inseguirla. Ogni messaggio, ogni spiegazione, ogni tentativo di farle capire quanto vali, la allontana. Il cervello umano funziona così: ciò che è troppo disponibile perde valore, ciò che si allontana diventa interessante. Lei ora ti ha sotto controllo — sa che ci sei, sa che soffri, sa che sei lì. Deve tornare a non saperlo.
+
+Mossa 1 — Il messaggio finale. Mandale UN solo messaggio, adulto e corto: "Ho capito quello che mi hai detto. Non ti inseguo, mi prendo il mio spazio per metabolizzare. Ci sentiremo quando avrà senso." Stop. Niente cuori, niente "ti amerò sempre", niente aperture. Poi sparisci.
+
+Mossa 2 — Silenzio radio per 21-30 giorni. Non scrivere, non chiamare, non mettere like, non guardare le sue storie (usa il browser in incognito se devi), non chiedere a amici comuni. Zero. Questo non è puntiglio, è l'unica leva che hai.
+
+Cosa farà lei, in ordine: prime 48 ore sollievo e senso di libertà. Giorno 3-7 curiosità ("perché non scrive più?"). Giorno 7-14 controlla i tuoi social, cerca segnali. Giorno 14-21 inizia a sentire il vuoto e a idealizzarti. Giorno 21-30 ti scriverà o avrà un motivo per farlo — sarà spesso una scusa ("hai tu il mio libro?", "come stai?", un meme). È il segnale.
+
+Mossa 3 — Nel frattempo tu lavori. Palestra 4 volte a settimana, non una di meno. Cambia un elemento visibile: taglio di capelli, stile, peso. Posta 2-3 foto nel mese dove fai qualcosa di nuovo e concreto, mai forzato, mai rivolto a lei. Vedi amici. Esci. Non startene chiuso.
+
+Mossa 4 — Quando ti scrive. Non saltare. Rispondi dopo 3-8 ore, breve, leggero, adulto. Nessun discorso sul passato, nessuna emozione forte. Se dice "come stai", tu: "Bene, sto concentrandomi su [qualcosa di concreto]. E tu?". Curiosità, non disperazione. Lei vuole vedere se sei ancora il ragazzo che supplica o se sei diventato qualcun altro.
+
+Mossa 5 — Il primo incontro. Non casa tua, non a cena romantica. Caffè, aperitivo, passeggiata. Durata massima 60-90 minuti, tu che te ne vai per primo dicendo "dai devo andare, ci sentiamo". Lasciala col desiderio di vedere come prosegue. Niente sesso al primo incontro, anche se ci sta. Fa sembrare tutto troppo facile.
+
+Mossa 6 — Calibrazione. Da lì dipende da cosa era la rottura. Se era crisi di routine, ripartire piano. Se era tradimento o cose gravi, devi capire se vuoi davvero tornare o solo vincere. Fai questa distinzione ora, perché conta.
+
+Se dopo 30 giorni non ti scrive, allora le mandi TU un messaggio leggero e concreto, non emotivo: "Ehi, passavo a prendere quella cosa, se la vuoi te la lascio al bar sotto casa". Fine. Se morde va avanti. Se non morde, hai la risposta che ti serviva.
+
+La regola d'oro: lei torna se percepisce che sei diventato migliore senza di lei. Non torna mai perché la supplichi. Mai. Ora dimmi: quando è successo esattamente, quanto è durato il rapporto, cosa ti ha detto precisamente nel lasciarti, e avete contatti dall'ultima volta? Da lì affino la strategia.`,
+
     alcol: `Senti, il problema non è "smettere", è il vuoto che lascia. Il tuo cervello ha imparato che alle 19 arriva il premio chimico, e se gli togli quello senza sostituire qualcosa va in tilt. Quindi fai così: identifica i 2-3 momenti precisi in cui scatta la voglia (orario, contesto, persone) e per ognuno prepara un'azione sostitutiva pronta — camminata, doccia fredda, telefonata, palestra. Niente forza di volontà, solo automatismo nuovo. Le prime due settimane sentirai irritabilità, sonno strano, fame di zuccheri: è normale, dura 10-14 giorni e poi svanisce. Dopo 30 giorni il cervello ricalibra dopamina e l'idea stessa di bere ti sembrerà aliena. Tieni il punto.`,
 
     fumo: `La sigaretta non ti dà piacere: ti toglie il fastidio creato dalla precedente. È una trappola chimica, non un vizio. Il craving fisico dura 3-5 minuti per onda e cala drasticamente dopo 72 ore. Quando arriva: bevi acqua fredda, fai 20 respiri profondi, esci dal contesto. Cambia le associazioni una per una: caffè senza, post-pasto senza, pausa lavoro senza. Aspettati 2 settimane di nervi tesi e sonno alterato, poi finisce. Chi ricasca lo fa quasi sempre nel mese 2-3 in un momento di stress: prepara già ora cosa farai in quel momento.`,
