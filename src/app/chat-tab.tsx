@@ -1,44 +1,120 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Send, Sparkles, Zap, Brain } from "lucide-react";
+import { Send, Sparkles, Brain, Zap } from "lucide-react";
+import { saveMessage, loadMessages, getLastMessages } from "../lib/conversation-memory";
 
-type Msg = { role: "user" | "assistant"; content: string; sources?: any[]; cached?: boolean; usedLLM?: boolean };
+type Msg = { role: "user" | "assistant"; content: string; timestamp: number; sources?: any[]; cached?: boolean; usedLLM?: boolean };
+
+function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/^\s*[-*•]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\n{3,}/g, "\n\n");
+}
 
 export default function ChatTab({ sid }: { sid: string }) {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [load, setLoad] = useState(false);
   const [preds, setPreds] = useState<string[]>([]);
-  const ref = useRef<HTMLDivElement>(null);
+  const [awaitingNarrative, setAwaitingNarrative] = useState(false);
+  const [narrativeAttempts, setNarrativeAttempts] = useState(0);
+  const [profile, setProfile] = useState<any>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { fetch(`/api/predict?sessionId=${sid}`).then(r => r.json()).then(d => setPreds(d.predictions ?? [])); }, [sid]);
-  useEffect(() => { ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: "smooth" }); }, [msgs]);
+  useEffect(() => { bottomRef.current?.scrollTo({ top: bottomRef.current.scrollHeight, behavior: "smooth" }); }, [msgs]);
+
+  // Carica profilo e messaggi da localStorage all'avvio
+  useEffect(() => {
+    // Carica messaggi persistiti
+    const saved = loadMessages(sid);
+    if (saved.length > 0) {
+      setMsgs(saved);
+      setAwaitingNarrative(false);
+    } else {
+      // Primo avvio: onboarding aperto
+      setAwaitingNarrative(true);
+      setMsgs([{
+        role: "assistant",
+        content: `Ciao, sono Atlas. Sono qui per aiutarti a capire e agire su quello che ti pesa.\n\nRaccontami cosa ti sta succedendo: una situazione, una domanda, un problema concreto. Anche poche parole bastano per partire.`,
+        timestamp: Date.now(),
+      }]);
+    }
+    // Carica profilo
+    fetch(`/api/profile?sessionId=${sid}`).then(r => r.json()).then(d => {
+      if (d.profile) setProfile(d.profile);
+    }).catch(() => {});
+  }, [sid]);
 
   async function send(q?: string) {
     const query = (q ?? input).trim(); if (!query || load) return;
-    setInput(""); setMsgs(m => [...m, { role: "user", content: query }]); setLoad(true);
+    setInput("");
+    const userMsg: Msg = { role: "user", content: query, timestamp: Date.now() };
+    setMsgs(m => [...m, userMsg]);
+    saveMessage(sid, userMsg);
+    setLoad(true);
+
+    // Onboarding: accetta qualsiasi input utile
+    if (awaitingNarrative) {
+      setNarrativeAttempts(prev => prev + 1);
+      const isSubstantial = query.length > 15 || /alcol|droga|fumo|dipend|relazione|lavor|sold|fitness|palestra|studio|motivazione/i.test(query);
+
+      if (isSubstantial || narrativeAttempts >= 1) {
+        setAwaitingNarrative(false);
+        await fetch("/api/profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: sid, profile: { onboardingComplete: true } }),
+        });
+        const confirmMsg: Msg = { role: "assistant", content: `Capito. Ho abbastanza per partire. Di cosa hai bisogno oggi?`, timestamp: Date.now() };
+        setMsgs(m => [...m, confirmMsg]);
+        saveMessage(sid, confirmMsg);
+        setLoad(false);
+        return;
+      } else {
+        const askMsg: Msg = { role: "assistant", content: `Raccontami un po' di più — anche due frasi bastano. Di cosa si tratta?`, timestamp: Date.now() };
+        setMsgs(m => [...m, askMsg]);
+        saveMessage(sid, askMsg);
+        setLoad(false);
+        return;
+      }
+    }
+
+    // Conversazione normale
     try {
-      const r = await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query, sessionId: sid }) });
+      const history = getLastMessages(sid, 6);
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ query, sessionId: sid, conversationHistory: history }),
+      });
       const d = await r.json();
-      setMsgs(m => [...m, { role: "assistant", content: d.answer, sources: d.sources, cached: d.cached, usedLLM: d.usedLLM }]);
+      const assistantMsg: Msg = { role: "assistant", content: d.answer, timestamp: Date.now(), sources: d.sources, cached: d.cached, usedLLM: d.usedLLM };
+      setMsgs(m => [...m, assistantMsg]);
+      saveMessage(sid, assistantMsg);
       setPreds(d.predictions ?? []);
-    } catch (e: unknown) { const err = e instanceof Error ? e.message : String(e); setMsgs(m => [...m, { role: "assistant", content: `Errore: ${err}` }]); }
-    finally { setLoad(false); }
+    } catch (e: unknown) {
+      const err = e instanceof Error ? e.message : String(e);
+      const errorMsg: Msg = { role: "assistant", content: `Errore: ${err}`, timestamp: Date.now() };
+      setMsgs(m => [...m, errorMsg]);
+      saveMessage(sid, errorMsg);
+    } finally {
+      setLoad(false);
+    }
   }
 
   return (
     <>
-      <div ref={ref} className="flex-1 overflow-y-auto space-y-4 pb-32 min-h-[60vh]">
+      <div ref={bottomRef} className="flex-1 overflow-y-auto space-y-4 pb-32 min-h-[60vh]">
         {msgs.length === 0 && <div className="text-center py-16 text-zinc-500"><Sparkles className="w-10 h-10 mx-auto mb-4 text-indigo-400"/><p className="mb-2 text-zinc-300 font-medium">Fai una domanda per iniziare</p><p className="text-xs">Atlas apprende il tuo focus e predice le prossime domande</p></div>}
         {msgs.map((m, i) => <div key={i} className={`rounded-xl p-4 ${m.role === "user" ? "bg-indigo-600/20 border border-indigo-500/30 ml-8" : "bg-zinc-900/80 border border-zinc-800 mr-8"}`}>
-          {m.role === "assistant" && <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2"><Brain className="w-3.5 h-3.5" /><span>Atlas</span>
-            {m.cached && <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300"><Zap className="w-3 h-3" />cached</span>}
-            {m.usedLLM === false && <span className="px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">retrieval-only</span>}
-          </div>}
-          <div className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</div>
-          {m.sources && m.sources.length > 0 && <details className="mt-3 text-xs text-zinc-400"><summary className="cursor-pointer hover:text-zinc-200">Fonti ({m.sources.length})</summary>
-            <ul className="mt-2 space-y-1">{m.sources.map((s: any, j: number) => <li key={j} className="pl-2 border-l border-zinc-700"><code className="text-indigo-300">[{s.source.id}]</code> {s.source.authors} ({s.source.year}) — <em>{s.source.title}</em>. {s.source.venue}. <span className="text-zinc-500">score: {s.score.toFixed(3)}</span></li>)}</ul>
-          </details>}
+          {m.role === "assistant" && <div className="flex items-center gap-2 text-xs text-zinc-400 mb-2"><Brain className="w-3.5 h-3.5" /><span>Atlas</span></div>}
+          <div className="whitespace-pre-wrap text-sm leading-relaxed">{cleanMarkdown(m.content)}</div>
         </div>)}
         {load && <div className="rounded-xl p-4 bg-zinc-900/80 border border-zinc-800 mr-8"><div className="flex items-center gap-2 text-zinc-400 text-sm"><div className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" /><span>Atlas sta cercando e ragionando…</span></div></div>}
       </div>

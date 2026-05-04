@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { answer } from "@/lib/rag";
-import { recordQuery, predictNext, cacheAnswer, getCachedAnswer } from "@/lib/profile";
+import { recordQuery, predictNext, cacheAnswer, getCachedAnswer, recordInteraction, detectGaps } from "@/lib/profile";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const { query, sessionId } = (await req.json()) as { query: string; sessionId: string };
+  const body = (await req.json()) as { query: string; sessionId: string; deepMode?: boolean; conversationHistory?: { role: string; content: string }[] };
+  const { query, sessionId, deepMode, conversationHistory } = body;
   if (!query || !sessionId) {
     return NextResponse.json({ error: "missing query or sessionId" }, { status: 400 });
   }
@@ -16,17 +17,22 @@ export async function POST(req: NextRequest) {
   if (cached) {
     result = { answer: cached, sources: [], usedLLM: true, cached: true };
   } else {
-    result = { ...(await answer(query)), cached: false };
+    result = { ...(await answer(query, deepMode, sessionId, conversationHistory)), cached: false };
     cacheAnswer(query, result.answer);
   }
 
   // 2. Record in user profile
   await recordQuery(sessionId, query);
+  recordInteraction(sessionId);
 
   // 3. Predict next probable questions
   const predictions = await predictNext(sessionId, 5);
 
-  // 4. Prefetch top prediction in background (fire-and-forget)
+  // 4. Detect profile gaps and generate probing questions
+  const gaps = detectGaps(sessionId, query);
+  const probing = gaps.slice(0, 2); // max 2 probing questions per interaction
+
+  // 5. Prefetch top prediction in background (fire-and-forget)
   if (predictions[0] && !getCachedAnswer(predictions[0])) {
     (async () => {
       try {
@@ -38,5 +44,5 @@ export async function POST(req: NextRequest) {
     })();
   }
 
-  return NextResponse.json({ ...result, predictions });
+  return NextResponse.json({ ...result, predictions, probing });
 }

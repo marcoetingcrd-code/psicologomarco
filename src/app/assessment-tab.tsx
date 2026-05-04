@@ -48,8 +48,8 @@ export default function AssessmentTab({ sid }: { sid: string }) {
         <div className="space-y-4">
           {items.map((item, i) => <div key={item.id} className="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
             <p className="text-sm text-zinc-300 mb-3">{i + 1}. {item.text}</p>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5, 6, 7].map(v => <button key={v} onClick={() => setAns(p => { const a = [...p]; a[i] = v; return a; })} className={`flex-1 py-2 rounded-lg text-xs font-medium border ${ans[i] === v ? "bg-indigo-600 border-indigo-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"}`}>{v}</button>)}
+            <div className="grid grid-cols-4 sm:flex sm:gap-1 gap-2">
+              {[1, 2, 3, 4, 5, 6, 7].map(v => <button key={v} onClick={() => setAns(p => { const a = [...p]; a[i] = v; return a; })} className={`min-h-[44px] py-2 rounded-lg text-xs font-medium border ${ans[i] === v ? "bg-indigo-600 border-indigo-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"}`}>{v}</button>)}
             </div>
           </div>)}
         </div>

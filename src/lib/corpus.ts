@@ -2,6 +2,8 @@
 // su attrazione, attaccamento, relazioni, neurobiologia del desiderio.
 // Tutte le referenze sono citabili e tracciabili nei database accademici pubblici.
 
+export type EvidenceLevel = "peer-reviewed" | "emerging" | "philosophical" | "experiential" | "cultural";
+
 export interface Source {
   id: string;
   authors: string;
@@ -12,6 +14,7 @@ export interface Source {
   url?: string;
   topic: string[];
   summary: string; // testo usato per embedding + retrieval
+  library: EvidenceLevel; // livello di evidenza della fonte
 }
 
 export const CORPUS: Source[] = [
@@ -23,6 +26,7 @@ export const CORPUS: Source[] = [
     venue: "Behavioral and Brain Sciences, 12(1), 1-49",
     doi: "10.1017/S0140525X00023992",
     topic: ["evolutionary psychology", "mate selection", "cross-cultural"],
+    library: "peer-reviewed",
     summary:
       "Studio cross-culturale su 37 culture (10,047 partecipanti) che testa ipotesi evoluzioniste sulle preferenze di accoppiamento. Le donne valorizzano più degli uomini le risorse economiche e lo status sociale nei partner; gli uomini valorizzano più delle donne la giovinezza e l'attrattività fisica come segnali di fertilità. Entrambi i sessi valorizzano massimamente gentilezza e intelligenza. I risultati supportano la teoria della selezione sessuale e dell'investimento parentale. Critica importante: le differenze sono medie statistiche, con enorme sovrapposizione tra i sessi; fattori culturali ed economici modulano fortemente l'entità delle differenze.",
   },
@@ -34,6 +38,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Personality and Social Psychology, 52(3), 511-524",
     doi: "10.1037/0022-3514.52.3.511",
     topic: ["attachment", "romantic love", "adult relationships"],
+    library: "peer-reviewed",
     summary:
       "Paper seminale che applica la teoria dell'attaccamento di Bowlby alle relazioni romantiche adulte. Identifica tre stili di attaccamento adulto (sicuro, ansioso-ambivalente, evitante) che corrispondono alle categorie infantili della Strange Situation di Ainsworth. Le persone con attaccamento sicuro riportano relazioni più lunghe, meno divorzi, maggiore intimità. Gli ansiosi oscillano tra idealizzazione e gelosia. Gli evitanti temono la vicinanza. Questo framework sostituisce l'idea di 'tecniche di attrazione' con una comprensione strutturale del funzionamento relazionale.",
   },
@@ -45,6 +50,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Comparative Neurology, 493(1), 58-62",
     doi: "10.1002/cne.20772",
     topic: ["neuroscience", "love", "dopamine"],
+    library: "peer-reviewed",
     summary:
       "Studio fMRI su persone innamorate: l'amore romantico attiva l'area tegmentale ventrale (VTA) e il nucleo caudato, regioni ricche di dopamina associate al sistema di ricompensa e motivazione. L'amore non è principalmente un'emozione ma un sistema motivazionale (drive) simile alla sete o alla fame. Fisher propone tre sistemi distinti con circuiti neurali separati: lussuria (testosterone/estrogeni), attrazione romantica (dopamina), attaccamento (ossitocina/vasopressina). Questo spiega perché si può desiderare chi non si ama e amare chi non si desidera.",
   },
@@ -56,6 +62,7 @@ export const CORPUS: Source[] = [
     venue: "Personality and Social Psychology Bulletin, 23(4), 363-377",
     doi: "10.1177/0146167297234003",
     topic: ["intimacy", "self-disclosure", "closeness"],
+    library: "peer-reviewed",
     summary:
       "Celebre studio delle '36 domande che fanno innamorare'. Due estranei si pongono a turno 36 domande di intimità crescente per 45 minuti, seguite da 4 minuti di sguardo reciproco. La procedura genera sentimenti di vicinanza paragonabili a quelli delle relazioni più strette degli stessi partecipanti. Dimostra che la vicinanza emotiva nasce dalla self-disclosure reciproca, escalata e vulnerabile, non dalla 'chimica'. Pilastro del self-expansion model di Aron: amiamo chi espande il nostro sé.",
   },
@@ -67,6 +74,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Personality and Social Psychology, 94(2), 245-264",
     doi: "10.1037/0022-3514.94.2.245",
     topic: ["mate preferences", "speed dating", "evolutionary psychology"],
+    library: "peer-reviewed",
     summary:
       "Studio di speed dating che sfida il paradigma di Buss: le preferenze dichiarate (status per donne, bellezza per uomini) NON predicono l'attrazione effettiva dopo un incontro reale. Una volta conosciuta una persona, uomini e donne mostrano gli stessi predittori di attrazione romantica. Implicazione: le 'regole evolutive' funzionano su ipotetici, non sulla realtà. Colpisce duramente la letteratura pick-up basata su categorie rigide di 'cosa vogliono le donne'.",
   },
@@ -77,6 +85,7 @@ export const CORPUS: Source[] = [
     title: "Attachment in adulthood: Structure, dynamics, and change (2nd ed.)",
     venue: "Guilford Press",
     topic: ["attachment", "adult development", "clinical"],
+    library: "peer-reviewed",
     summary:
       "Manuale accademico di riferimento sull'attaccamento adulto. Dimostra con centinaia di studi che la sicurezza dell'attaccamento predice: migliore regolazione emotiva, relazioni più soddisfacenti, minor ansia sociale, maggiore capacità esplorativa, benessere psicofisico. La sicurezza si può COSTRUIRE (earned security) attraverso: relazioni correttive, psicoterapia, pratiche di mentalizzazione. Contiene protocolli empirici per l'autosviluppo della base sicura.",
   },
@@ -87,6 +96,7 @@ export const CORPUS: Source[] = [
     title: "Why marriages succeed or fail",
     venue: "Simon & Schuster",
     topic: ["marriage", "communication", "conflict"],
+    library: "peer-reviewed",
     summary:
       "Gottman, su dati longitudinali di migliaia di coppie, identifica i Four Horsemen of the Apocalypse (critica, disprezzo, difensività, muro di pietra) come predittori del divorzio con accuratezza del 90%. Il disprezzo è il singolo predittore più forte. Rapporto 5:1 tra interazioni positive e negative distingue le coppie felici. L'antidoto non sono 'tecniche di seduzione' ma: gentilezza abituale, building love maps, riparazione dopo i conflitti, turning toward bids.",
   },
@@ -97,6 +107,7 @@ export const CORPUS: Source[] = [
     title: "The Art of Loving",
     venue: "Harper & Row",
     topic: ["philosophy", "love", "maturity"],
+    library: "peer-reviewed",
     summary:
       "Fromm distingue tra falling in love (passivo, infantile, simbiotico) e standing in love (attivo, maturo, produttivo). L'amore è un'arte che richiede disciplina, concentrazione, pazienza, cura, responsabilità, rispetto, conoscenza. La tesi centrale: 'non c'è altro modo di essere amati che essere degni d'amore'. Demolisce l'idea di tecniche seduttive: la capacità d'amore dipende dallo sviluppo della personalità produttiva, non da trucchi relazionali.",
   },
@@ -108,6 +119,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Personality and Social Psychology, 114(1), 131-152",
     doi: "10.1037/pspp0000159",
     topic: ["charisma", "personality", "social influence"],
+    library: "peer-reviewed",
     summary:
       "Validazione empirica del carisma come costrutto a due dimensioni: influence (capacità di guidare, presenza, sicurezza) e affability (calore, accessibilità, empatia). Il carisma è misurabile (scala GCI a 6 item) e predittivo di esiti relazionali, lavorativi, di leadership. Contrariamente al mito, il carisma si può allenare: postura, contatto visivo, voce, ascolto attivo, espressività emotiva sono tutti modulabili con pratica deliberata.",
   },
@@ -119,6 +131,7 @@ export const CORPUS: Source[] = [
     venue: "Psychological Science, 8(3), 162-166",
     doi: "10.1111/j.1467-9280.1997.tb00403.x",
     topic: ["journaling", "emotion regulation", "health"],
+    library: "peer-reviewed",
     summary:
       "Meta-sintesi su 20+ anni di ricerca: scrivere per 15-20 minuti per 3-4 giorni consecutivi sugli eventi più stressanti della propria vita produce miglioramenti misurabili in salute fisica (minori visite mediche), funzione immunitaria, performance lavorativa e accademica. Meccanismo: l'articolazione linguistica trasforma esperienze emotive frammentate in narrative coerenti, riducendo il carico cognitivo della ruminazione.",
   },
@@ -129,6 +142,7 @@ export const CORPUS: Source[] = [
     title: "Social pressures in informal groups: A study of human factors in housing",
     venue: "Harper & Brothers",
     topic: ["propinquity", "friendship formation", "social psychology"],
+    library: "peer-reviewed",
     summary:
       "Studio classico al MIT: la prossimità fisica è il predittore più forte della formazione di amicizie. Residenti di appartamenti adiacenti avevano probabilità 10 volte maggiore di diventare amici rispetto a quelli a fine corridoio. Propinquity effect: contatti casuali ripetuti generano familiarità e liking. Rilevante oggi per ambienti digitali: esposizione ripetuta in contesti condivisi (lavoro, hobby) batte statisticamente qualsiasi 'strategia di seduzione'.",
   },
@@ -140,6 +154,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Personality and Social Psychology, 9(2), 1-27",
     doi: "10.1037/h0025848",
     topic: ["mere exposure", "familiarity", "liking"],
+    library: "peer-reviewed",
     summary:
       "L'esposizione ripetuta a uno stimolo (persona, parola, immagine) aumenta il gradimento verso lo stimolo, anche in assenza di consapevolezza. Effetto robusto replicato in centinaia di studi. Implicazione relazionale: frequentare contesti ricorrenti (palestra, corsi, ambienti di interesse comune) produce attrazione in modo più affidabile di ogni tecnica persuasiva.",
   },
@@ -150,6 +165,7 @@ export const CORPUS: Source[] = [
     title: "Attached: The new science of adult attachment",
     venue: "Tarcher/Penguin",
     topic: ["attachment", "self-help evidence-based", "dating"],
+    library: "peer-reviewed",
     summary:
       "Traduzione rigorosa della letteratura scientifica sull'attaccamento adulto in guida pratica. Tre pattern: secure, anxious, avoidant. Compatibilità: secure-secure e secure-anxious funzionano; anxious-avoidant è la trappola più tossica (attrazione intensa, ansia cronica). La 'chimica' spesso descritta dai pick-up artist come attrazione è in realtà attivazione del sistema ansioso — cioè instabilità, non desiderio sano.",
   },
@@ -160,6 +176,7 @@ export const CORPUS: Source[] = [
     title: "Why we sleep: Unlocking the power of sleep and dreams",
     venue: "Scribner",
     topic: ["sleep", "cognition", "health"],
+    library: "peer-reviewed",
     summary:
       "Sintesi della ricerca sul sonno: meno di 7 ore riducono testosterone, peggiorano regolazione emotiva, compromettono riconoscimento delle espressioni facciali (meno empatia), aumentano reattività amigdalare (più ansia), degradano la pelle. Una settimana di 6 ore di sonno = livelli di testosterone di un uomo di 10 anni più vecchio. Impatto diretto su presenza, attrattività, capacità relazionale.",
   },
@@ -171,6 +188,7 @@ export const CORPUS: Source[] = [
     venue: "Journal of Personality and Social Psychology, 68(3), 518-530",
     doi: "10.1037/0022-3514.68.3.518",
     topic: ["self-esteem", "belonging", "sociometer"],
+    library: "peer-reviewed",
     summary:
       "Sociometer theory: l'autostima è un indicatore psicologico del proprio valore relazionale percepito (quanto ci si sente accettabili agli altri). Non una qualità statica, ma un feedback dinamico. Implicazione pratica: l'autostima solida non si costruisce con affermazioni, ma sviluppando qualità realmente valorizzate dal proprio gruppo sociale di riferimento (competenza, gentilezza, affidabilità, contributo).",
   },
@@ -181,6 +199,7 @@ export const CORPUS: Source[] = [
     title: "The Body Keeps the Score: Brain, Mind, and Body in the Healing of Trauma",
     venue: "Viking",
     topic: ["trauma", "PTSD", "neurobiology", "somatic", "body"],
+    library: "peer-reviewed",
     summary:
       "Sintesi di 30 anni di ricerca clinica sul trauma. Il trauma non è solo ricordo ma impronta fisiologica: sistema nervoso simpatico iperattivo, amigdala sensibilizzata, corteccia prefrontale disattivata. Le memorie traumatiche sono immagazzinate come frammenti sensoriali, non narrative. Guarigione: sicurezza, rielaborazione narrativa, lavoro corporeo (yoga, EMDR, neurofeedback). Attaccamento insicuro infantile sensibilizza al trauma e ne ostacola la risoluzione.",
   },
@@ -192,6 +211,7 @@ export const CORPUS: Source[] = [
     venue: "American Journal of Preventive Medicine, 14(4), 245-258",
     doi: "10.1016/S0749-3797(98)00017-8",
     topic: ["ACE", "trauma", "childhood adversity", "health"],
+    library: "peer-reviewed",
     summary:
       "Studio ACE su 17.337 partecipanti: dose-risposta tra esperienze avverse infantili e rischio sanitario adulto. Ogni ACE aggiuntivo aumenta esponenzialmente rischio malattie croniche, disturbi mentali, relazioni disfunzionali. Con 4+ ACE: rischio depressione x4, suicidio x12. Mappa trauma infantile come fattore di rischio sistemico, non destino.",
   },
@@ -203,6 +223,7 @@ export const CORPUS: Source[] = [
     venue: "Review of General Psychology, 2(3), 271-299",
     doi: "10.1037/1089-2680.2.3.271",
     topic: ["emotion regulation", "process model", "coping"],
+    library: "peer-reviewed",
     summary:
       "Process model della regolazione emotiva: 5 punti di intervento. Strategie cognitive (reappraisal) adattive; soppressione espressiva costosa (aumenta attivazione fisiologica, degrada relazioni). Attaccamento evitante = soppressione sistematica → costi psicosomatici. Ansioso = ruminazione → mantiene attivazione. Regolazione si può allenare: mindfulness, CBT, ACT, DBT.",
   },
@@ -214,6 +235,7 @@ export const CORPUS: Source[] = [
     venue: "Infant Mental Health Journal, 22(1-2), 67-94",
     doi: "10.1002/1097-0355(200101/04)22:1<67::AID-IMHJ3>3.0.CO;2-G",
     topic: ["interpersonal neurobiology", "mindsight", "window of tolerance"],
+    library: "peer-reviewed",
     summary:
       "Interpersonal Neurobiology: il cervello si sviluppa in contesti relazionali. Co-regulazione modella circuiti prefrontali. Window of tolerance: zona ottimale arousal. Iper-arousal = iperattivazione. Ipo-arousal = freeze/dissociazione. Mindfulness e relazioni sicure ri-allargano la finestra. Riconoscere segnali di uscita è prerequisito per regolazione emotiva efficace.",
   },
@@ -224,6 +246,7 @@ export const CORPUS: Source[] = [
     title: "The Polyvagal Theory: Neurophysiological Foundations",
     venue: "W. W. Norton",
     topic: ["polyvagal theory", "vagus nerve", "autonomic nervous system", "safety"],
+    library: "peer-reviewed",
     summary:
       "Polyvagal Theory: 3 sistemi neurali. (1) Vagale ventrale sociale: sicurezza, connessione, comunicazione facciale/vocale. (2) Simpatico: mobilizzazione/fight-flight. (3) Vagale dorsale: immobilizzazione/freeze. Il sistema sociale deve essere attivo per intimità. Stress cronico disattiva il sociale, attiva fight-flight o freeze. Social engagement è prerequisito biologico per legame sicuro e desiderio.",
   },
@@ -234,6 +257,7 @@ export const CORPUS: Source[] = [
     title: "Loneliness: Human Nature and the Need for Social Connection",
     venue: "W. W. Norton",
     topic: ["loneliness", "social connection", "health", "cognition"],
+    library: "peer-reviewed",
     summary:
       "La solitudine cronica altera la percezione degli stimoli sociali (ipervigilanza ai segnali di minaccia, sottopercezione dei segnali positivi), aumenta l'attivazione simpatica, peggiora il sonno, il sistema immunitario e la cognizione esecutiva. Ma la solitudine è percezione soggettiva: qualcuno può essere solo ma non sentirsi solo; qualcuno in una coppia può sentirsi profondamente solo. Il fattore protettivo è qualità delle relazioni, non quantità. Implicazione: combattere la solitudine richiede ristrutturazione cognitiva (non solo uscire di più) e costruzione di legami sicuri.",
   },
@@ -245,6 +269,7 @@ export const CORPUS: Source[] = [
     venue: "Frontiers in Neurology, 10, 443",
     doi: "10.3389/fneur.2019.00443",
     topic: ["exercise", "sleep", "health", "cognition", "mood"],
+    library: "peer-reviewed",
     summary:
       "Relazione bidirezionale esercizio-sonno: esercizio regolare (soprattutto aerobico moderato) migliora qualità e durata del sonno, riduce latenza di addormentamento, aumenta sonno profondo. Sonno migliorato aumenta aderenza all'esercizio, motivazione, energia. L'esercizio mattutino è più efficace per sonno rispetto a serale intenso (che può eccitare). L'esercizio migliora anche regolazione emotiva, autostima, presenza sociale, segnali di vitalità (postura, voce, movimento) che sono marker di attrattività.",
   },
@@ -255,6 +280,7 @@ export const CORPUS: Source[] = [
     title: "Mindfulness-based treatment approaches: Clinician's guide to evidence base and applications",
     venue: "Elsevier Academic Press",
     topic: ["mindfulness", "MBSR", "MBCT", "depression", "anxiety"],
+    library: "peer-reviewed",
     summary:
       "Mindfulness-Based Stress Reduction (MBSR) e Mindfulness-Based Cognitive Therapy (MBCT): efficaci per depressione ricorrente (prevenzione relaps), ansia, stress, dolore cronico. Meccanismo: decentramento (decentering) dalla propria esperienza mentale - osservare i pensieri/emoizioni come eventi mentali temporanei, non verità assolute. Questo interrompe la ruminazione e la reattività emotiva. Mindfulness allenata sistematicamente produce cambiamenti strutturali cerebrali (ispessimento corteccia prefrontale, riduzione volume amigdala).",
   },
@@ -265,6 +291,7 @@ export const CORPUS: Source[] = [
     title: "Attachment Theory in Practice: EFT with Individuals, Couples, and Families",
     venue: "Guilford Press",
     topic: ["attachment", "EFT", "couples therapy", "emotion"],
+    library: "peer-reviewed",
     summary:
       "Emotionally Focused Therapy (EFT): terapia di coppia basata sull'attaccamento. Le crisi di coppia sono crisi di attaccamento: il partner appare minaccioso o non disponibile, il sistema di attaccamento va in allarme. Cicli disfunzionali: persecuzione-fuga, ritiro-ritiro, accoppiamento ansioso. La cura: accesso alle emozioni primarie (paura, vergogna, dolore) sotto le emozioni secondarie (rabbia, controllo). Creazione di nuovi eventi di contatto emotivo sicuro. Efficacia dimostrata: 70-75% recupero relazionale, 90% miglioramento significativo.",
   },
@@ -275,7 +302,485 @@ export const CORPUS: Source[] = [
     title: "iGen: Why Today's Super-Connected Kids Are Growing Up Less Rebellious, More Tolerant, Less Happy",
     venue: "Atria Books",
     topic: ["social media", "depression", "anxiety", "youth", "digital"],
+    library: "peer-reviewed",
     summary:
       "Generazione iGen (nati 1995-2012): uso massiccio di social media, meno interazioni face-to-face, depressione e ansia in aumento drammatico (2007-2017 spike). Correlazione non causazione ma l'evidenza suggerisce che più ore su schermo = meno felicità, più solitudine, meno sonno. Il confronto sociale mediato è particolarmente tossico. Implicazione per adulti: la presenza digitale costante sottrae attenzione dalla relazione presente, crea distrazione, riduce qualità del contatto emotivo. La 'presenza' è prerequisito per intimità.",
+  },
+  // ========== LIBRERIA FILOSOFICA / ESISTENZIALE ==========
+  {
+    id: "epictetus-135",
+    authors: "Epictetus (trad. Long)",
+    year: 135,
+    title: "Enchiridion (Handbook)",
+    venue: "Manoscritto stoico antico",
+    topic: ["stoicism", "control", "emotions", "philosophy"],
+    library: "philosophical",
+    summary:
+      "Dichotomy of Control: alcune cose sono sotto il nostro controllo (giudizi, impulsi, desideri, aversioni), altre no (corpo, proprietà, reputazione, ufficio). La libertà interiore nasce dal separare nettamente i due domini. La sofferenza deriva dal tentativo di controllare ciò che non è nostro. Applicazione relazionale: non puoi controllare se qualcuno ti ama; puoi controllare la tua autenticità, il tuo ascolto, la tua presenza. Il non-attaccamento non è indifferenza, ma distacco dalla dipendenza emotiva.",
+  },
+  {
+    id: "nietzsche-1882",
+    authors: "Nietzsche, F.",
+    year: 1882,
+    title: "The Gay Science",
+    venue: "Ernst Schmeitzner",
+    topic: ["eternal recurrence", "amor fati", "self-overcoming", "philosophy"],
+    library: "philosophical",
+    summary:
+      "Amor fati: amare il proprio destino includendo le sofferenze, le perdite, i rifiuti, come condizioni necessarie della propria esistenza. Eternal recurrence: vivresti la tua vita identica infinite volte? Se sì, l'hai vissuta bene. Self-overcoming: l'uomo è una corda tesa tra animale e super-uomo. L'amore come potenza creativa, non bisogno. La gelosia e il risentimento (ressentiment) sono espressioni di impotenza: colui che non può creare distrugge.",
+  },
+  {
+    id: "jung-1954",
+    authors: "Jung, C. G.",
+    year: 1954,
+    title: "The Archetypes and the Collective Unconscious",
+    venue: "Princeton University Press",
+    topic: ["archetypes", "shadow", "anima", "animus", "individuation"],
+    library: "philosophical",
+    summary:
+      "L'inconscio collettivo contiene archetipi (pattern primordiali) attivi in tutte le culture. Shadow: lato oscuro e negato della personalità; proiettato su partner, nemici, avversari. Anima/Animus: l'altro sesso interiore; relazioni esterne con partner sono proiezioni del rapporto con l'anima. Individuation: integrazione di tutte le parti della psiche, inclusa la shadow. Un uomo che non ha affrontato la sua anima proietta idealizzazione e delusione cicliche su ogni donna che incontra.",
+  },
+  // ========== LIBRERIA BIOHACKING / CORPO ==========
+  {
+    id: "huberman-2021",
+    authors: "Huberman, A. (podcast serie)",
+    year: 2021,
+    title: "Huberman Lab: Dopamine, Motivation, and Reward",
+    venue: "Stanford Medicine / YouTube",
+    topic: ["dopamine", "motivation", "habits", "neuroplasticity"],
+    library: "emerging",
+    summary:
+      "Sistema dopaminergico: dopamina codifica 'motivazione per il percorso', non solo 'ricompensa'. Picchi di dopamina (pornografia, social media, notifiche, droghe) deprimono il baseline dopaminergico, riducendo motivazione per attività a basso stimolo (studio, lavoro, relazioni). Protocollo: evitare picchi dopaminergici 1h prima e dopo l'attività target; esposizione a luce mattutina 10-30 min aumenta baseline; esercizio aerobico regolare aumenta recettori D2. In relazioni: la novella (novelty) attiva dopamina; la familiarità la abbassa. Per mantenere desiderio: introdurre novità leggera, intermittenza (vedi Panksepp).",
+  },
+  {
+    id: "panksepp-1998",
+    authors: "Panksepp, J.",
+    year: 1998,
+    title: "Affective Neuroscience: The Foundations of Human and Animal Emotions",
+    venue: "Oxford University Press",
+    topic: ["affective neuroscience", " SEEKING", "PLAY", "LUST", "CARE"],
+    library: "peer-reviewed",
+    summary:
+      "Sette sistemi emotivi primari nel cervello mammifero: SEEKING (ricerca/esplorazione), RAGE (rabbia), FEAR (paura), LUST (desiderio sessuale), CARE (accudimento), PANIC/GRIEF (separazione/distacco), PLAY (gioco sociale). Ogni sistema ha circuiti neurali distinti e neurochimici specifici. LUST è modulato da testosterone/estrogeni e dopamina nel MPOA. CARE è modulato da ossitocina e prolattina. PANIC/GRIEF è il sistema di attaccamento: separazione dal caregiver attiva distress come allarme biologico. Comprendere quale sistema è attivo in un momento dà controllo sulla propria risposta.",
+  },
+  // ========== LIBRERIA DARK / SEDUZIONE SCIENTIFICA ==========
+  {
+    id: "cialdini-2001",
+    authors: "Cialdini, R. B.",
+    year: 2001,
+    title: "Influence: Science and Practice (4th ed.)",
+    venue: "Allyn & Bacon",
+    topic: ["persuasion", "social influence", "compliance", "dark patterns"],
+    library: "peer-reviewed",
+    summary:
+      "Sei principi universali di influenza sociale: reciprocità (devo restituire), consistenza (impegno pubblico → adesione), prova sociale (faccio come gli altri), simpatia (piaccio a chi mi piace), autorità (obbedisco a esperti), scarsità (voglio ciò che è raro). Ogni principio può essere usato eticamente o manipolativamente. La differenza sta nell'intento e nel consenso informato. Applicazione difensiva: riconoscere quando qualcuno ti sta spingendo con reciprocità fittizia, scarsità artificiale, o autorità non meritoria. Applicazione relazionale: reciprocità genuina, scarsità reale (autenticità unica), prova sociale positiva.",
+  },
+  {
+    id: "fiske-2007",
+    authors: "Fiske, S. T., Cuddy, A. J. C., & Glick, P.",
+    year: 2007,
+    title: "Universal dimensions of social cognition: warmth and competence",
+    venue: "Trends in Cognitive Sciences, 11(2), 77-83",
+    doi: "10.1016/j.tics.2006.11.005",
+    topic: ["social cognition", "stereotypes", "warmth", "competence"],
+    library: "peer-reviewed",
+    summary:
+      "Stereotype Content Model: percezione sociale si riduce a due dimensioni. Warmth (intenzioni: amichevole o ostile) e Competence (capacità: efficace o inefficace). Quattro combinazioni: ammirato (alto-alto), pietoso (alto-basso), invidiato (basso-alto), disprezzato (basso-basso). La valutazione di warmth precede quella di competence evolutivamente (prima chiedo se mi ucciderai, poi se mi batterai). Implicazione: per essere amato, warmth è prerequisito; per essere rispettato, competence. Pick-up artist che insegnano solo 'dominance' (competenza) senza warmth generano attrazione superficiale ma repulsione relazionale. Warmth + Competence = carisma empirico.",
+  },
+  // ========== LIBRERIA ESOTERICA / SIMBOLICA ==========
+  {
+    id: "tarot-jung-1960",
+    authors: "Jung, C. G. (interpretazione archetipica)",
+    year: 1960,
+    title: "Archetipi e simboli nel Tarot",
+    venue: "Interpretazione jungiana del simbolismo",
+    topic: ["tarot", "archetypes", "symbolism", "self-knowledge"],
+    library: "cultural",
+    summary:
+      "DISCLAIMER: sistema esoterico non validato scientificamente. Presentato come esplorazione simbolica e culturale. I 22 Arcani Maggiori del Tarot mappano il percorso dell'individuazione jungiana: Il Matto (inizio, rischio), Il Mago (manifestazione), L'Imperatrice (fertilità creativa), L'Amante (scelta), La Ruota (cicli), La Forza (controllo istintivo), Il Carro (volontà), L'Eremita (introspezione), La Luna (inconscio, illusione), Il Sole (integrazione), Il Mondo (completamento). Come strumento di storytelling e auto-riflessione narrativa, può attivare insight analoghi al journaling, ma non ha potere predittivo o causale.",
+  },
+  {
+    id: "iching-wilhelm-1923",
+    authors: "Wilhelm, R. (trad.); Baynes, C. F. (trad. ing.)",
+    year: 1923,
+    title: "The I Ching or Book of Changes",
+    venue: "Princeton University Press",
+    topic: ["divination", "change", "yin-yang", "decision-making"],
+    library: "cultural",
+    summary:
+      "DISCLAIMER: sistema esoterico non validato scientificamente. Presentato come esplorazione culturale e narrativa. I Ching: 64 esagrammi che rappresentano situazioni fondamentali del cambiamento. La pratica di consultare gli esagrammi funziona come 'scaffolding cognitivo': obbliga a formulare una domanda chiara, a interpretare metaforicamente una situazione, a considerare prospettive opposte (yin/yang, linee mobili). Effetto analogo alla 'prospettiva esterna' in terapia: obbligare la mente a guardare un problema da un angolo diverso. Nessun potere predittivo sovrannaturale; valore strumentale nella riflessione.",
+  },
+  {
+    id: "human-design-ra-1992",
+    authors: "Ra Uru Hu (Robert Krakower)",
+    year: 1992,
+    title: "The Human Design System",
+    venue: "Human Design America",
+    topic: ["human design", "astrology", "i-ching", "kabbalah", "types"],
+    library: "cultural",
+    summary:
+      "DISCLAIMER: sistema esoterico non validato scientificamente. Presentato come esplorazione culturale e auto-riflessione. Human Design combina astrologia occidentale, I Ching, Kabbalah (Tree of Life), e chakra. Produce un 'Bodygraph' basato su data, ora e luogo di nascita. Quattro tipi: Manifestor, Generator, Projector, Reflector. Strategia per ciascuno: Generators aspettano di 'rispondere' (sacral response); Projectors aspettano di essere 'invitati'; Manifestors 'informano'; Reflectors aspettano un ciclo lunare. Come metafora narrativa: valida come stimolo all'introspezione (come qualsiasi sistema tipologico: MBTI, Enneagram, Big Five). Come strumento decisionale: nessuna validità empirica.",
+  },
+
+  // ====== LIBRERIA BUSINESS / CARIERA / FINANZA ======
+  {
+    id: "hill-think-grow-rich-1937",
+    authors: "Napoleon Hill",
+    year: 1937,
+    title: "Think and Grow Rich",
+    venue: "The Ralston Society",
+    topic: ["ricchezza", "successo", "mindset", "obbiettivi", "denaro", "carriera"],
+    library: "experiential",
+    summary: "Principio del desiderio ardente: fissare un obbiettivo monetario preciso, leggere ogni sera, visualizzare il possesso. Mastermind: gruppo di persone che si incontrano regolarmente per confrontarsi. Auto-suggestione: ripetere convinzioni positive quotidianamente. Hill ha intervistato 500 uomini di successo, isolando pattern mentali comuni. Il denaro segue il pensiero diretto e persistente, non il caso.",
+  },
+  {
+    id: "kiyosaki-rich-dad-1997",
+    authors: "Robert Kiyosaki",
+    year: 1997,
+    title: "Rich Dad Poor Dad",
+    venue: "Warner Books",
+    topic: ["finanza personale", "investimenti", "immobiliare", "debito", "contabilità", "denaro"],
+    library: "experiential",
+    summary: "Distingue attivi (generano reddito) da passivi (generano spese). La casa in cui vivi è un passivo. Lavorare per imparare, non per guadagnare. La paura di perdere ferma più persone del desiderio di vincere. Il cashflow è re: il flusso di denaro entrate-uscite determina la libertà finanziaria, non il salario. Imparare a delegare e usare le leggi fiscali a proprio favore.",
+  },
+  {
+    id: "ferriss-4-hour-workweek-2007",
+    authors: "Tim Ferriss",
+    year: 2007,
+    title: "The 4-Hour Workweek",
+    venue: "Crown Publishers",
+    topic: ["lifestyle design", "outsourcing", "produttività", "imprenditoria", "tempo"],
+    library: "experiential",
+    summary: "DEFINITION: definire cosa vuoi veramente, non accumulare denaro. ELIMINATION: applicare la legge di Pareto 80/20 a ogni attività; eliminare i 20% di compiti che producono 80% di stress. AUTOMATION: delegare a VA e creare flussi automatici di reddito. LIBERATION: negoziare il lavoro remoto. Il tempo è l'unica risorsa non recuperabile.",
+  },
+  {
+    id: "newport-deep-work-2016",
+    authors: "Cal Newport",
+    year: 2016,
+    title: "Deep Work",
+    venue: "Grand Central Publishing",
+    topic: ["produttività", "focus", "concentrazione", "lavoro", "studio", "carriera"],
+    library: "emerging",
+    summary: "Deep work: attività professionale eseguita in uno stato di concentrazione assoluta che spinge le capacità cognitive al limite. Shallow work: attività logistiche eseguite mentre si è distratto. Regola del 90 minuti: blocchi di lavoro ininterrotto. Smettere di controllare la posta e i social ogni 5 minuti: la distrazione distrugge il pensiero profondo. Ritualizzare l'inizio e la fine del deep work. La capacità di concentrarsi è come un muscolo: si allena.",
+  },
+  {
+    id: "ries-lean-startup-2011",
+    authors: "Eric Ries",
+    year: 2011,
+    title: "The Lean Startup",
+    venue: "Crown Business",
+    topic: ["startup", "imprenditoria", "mvp", "iterazione", "business"],
+    library: "emerging",
+    summary: "Build-Measure-Learn: ciclo di feedback rapido. MVP (Minimum Viable Product): la versione più povera del prodotto che permette di imparare qualcosa di validato dagli utenti. Pivot: cambiare strategia senza cambiare visione, basandosi su dati reali. Validated learning: l'apprendimento validato supera il perfectionismo. Misurare metriche reali (activation, retention, revenue, referral), non vanity metrics (visite, like).",
+  },
+  {
+    id: "thiel-zero-to-one-2014",
+    authors: "Peter Thiel",
+    year: 2014,
+    title: "Zero to One",
+    venue: "Crown Business",
+    topic: ["innovazione", "monopolio", "startup", "competizione", "business"],
+    library: "experiential",
+    summary: "La competizione è per i perdenti: i monopoli creano valore, la competizione distrugge profitto. Da zero a uno: creare qualcosa di nuovo (tecnologia verticale), non copiare da 1 a n (globalizzazione orizzontale). Segreto: ogni grande business si basa su una verità che la maggior parte delle persone non crede. Ultima domanda: perché no? Perché qualcuno non l'ha già fatto? La domanda più importante che un imprenditore può farsi.",
+  },
+  {
+    id: "housel-psychology-money-2020",
+    authors: "Morgan Housel",
+    year: 2020,
+    title: "The Psychology of Money",
+    venue: "Harriman House",
+    topic: ["finanza comportamentale", "investimenti", "risparmio", "denaro", "mindset"],
+    library: "emerging",
+    summary: "Il denaro è più psicologia che matematica. Nessuno è pazzo: le persone prendono decisioni finanziarie basate su esperienze uniche. L'obiettivo non è massimizzare il ritorno, ma massimizzare la libertà. Risparmiare è acquisto di opzioni future. La composizione degli interessi è la forza più potente del mondo finanziario. Il margine di sicurezza: la differenza tra ciò che pensi che accadrà e ciò che potrebbe accadere.",
+  },
+  {
+    id: "voss-never-split-2016",
+    authors: "Chris Voss",
+    year: 2016,
+    title: "Never Split the Difference",
+    venue: "Harper Business",
+    topic: ["negoziazione", "comunicazione", "persuasione", "business", "conflitto"],
+    library: "experiential",
+    summary: "Tactical empathy: capire il punto di vista dell'altro per influenzarlo. Mirroring: ripetere l'ultima parola dell'interlocutore per invitarlo a continuare. Labeling: dare un nome all'emozione dell'altro. No-oriented questions: domande a cui l'altro può rispondere no, per dargli sensazione di controllo. Accusation audit: elencare le proprie colpe prima che lo faccia l'altro. Ancoraggio: fare la prima offerta aggressiva.",
+  },
+  {
+    id: "patterson-crucial-conversations-2002",
+    authors: "Kerry Patterson, Joseph Grenny, Ron McMillan, Al Switzler",
+    year: 2002,
+    title: "Crucial Conversations",
+    venue: "McGraw-Hill",
+    topic: ["comunicazione difficile", "dialogo", "conflitto", "relazioni", "lavoro"],
+    library: "emerging",
+    summary: "Conversazioni cruciali: discussioni dove le poste sono alte, le opinioni divergono, le emozioni sono forti. Start with heart: chiedersi cosa si vuole veramente. Make it safe: creare condizioni di sicurezza psicologica. STATE path: Share facts, Tell story, Ask for other's path, Talk tentatively, Encourage testing. Non forzare consenso, cercare mutuo scopo.",
+  },
+  {
+    id: "covey-7-habits-1989",
+    authors: "Stephen Covey",
+    year: 1989,
+    title: "The 7 Habits of Highly Effective People",
+    venue: "Free Press",
+    topic: ["efficacia personale", "produttività", "priorità", "leadership", "abitudini"],
+    library: "experiential",
+    summary: "Principio Pareto 80/20: concentrarsi sulle attività ad alto impatto. Abitudine 1: sii proattivo (risposta tra stimolo e risposta). Abitudine 2: comincia con la fine in mente (visione personale). Abitudine 3: metti le cose importanti per prime. Abitudine 4: pensa win-win. Abitudine 5: cerca prima di capire, poi di essere capito. Abitudine 6: sinergia. Abitudine 7: affila la sega (auto-rinnovamento).",
+  },
+
+  // ====== LIBRERIA SEDUZIONE / DINAMICA SOCIALE MASCHILE ======
+  {
+    id: "strauss-game-2005",
+    authors: "Neil Strauss",
+    year: 2005,
+    title: "The Game: Penetrating the Secret Society of Pickup Artists",
+    venue: "ReganBooks",
+    topic: ["seduzione", "approccio", "dinamica sociale", "autostima", "relazioni"],
+    library: "experiential",
+    summary: "Documentario immersivo sulla subcultura della seduzione. Insegnamenti chiave: il peacock theory (distinguersi visivamente per attrarre attenzione), negging (battute leggermente svalutanti per abbassare le difese), il modello Mystery (A-Attrazione, C-Comfort, S-Seduzione). Critica interna: la seduzione meccanica porta a relazioni vuote; la vera attrazione nasce da autenticità e vulnerabilità controllata. Il miglior pickup artist è colui che non ha più bisogno di pickup.",
+  },
+  {
+    id: "manson-models-2011",
+    authors: "Mark Manson",
+    year: 2011,
+    title: "Models: Attract Women Through Honesty",
+    venue: "CreateSpace",
+    topic: ["seduzione", "attrazione", "autenticità", "vulnerabilità", "relazioni"],
+    library: "experiential",
+    summary: "Attrazione non è convinzione logica, ma risposta emotiva alla vulnerabilità autentica. Investimento emotivo: chi investe di più ha meno potere. Non inseguire; creare spazio perché l'altro investa. Vulnerabilità non è debolezza, è coraggio di esprimere verità sociale rischiosa. Le tre aree di attrazione: salute (fitness, stile), ricchezza (ambizione, risorse), connessione sociale (amici, status). La non-reattività: non reagire emotivamente ai test delle donne; rimanere centrato.",
+  },
+  {
+    id: "glover-no-more-mr-nice-guy-2003",
+    authors: "Robert Glover",
+    year: 2003,
+    title: "No More Mr. Nice Guy",
+    venue: "Running Press",
+    topic: ["assertività", "sindrome del bravo ragazzo", "autostima", "relazioni", "confini"],
+    library: "experiential",
+    summary: "Sindrome del bravo ragazzo: uomini che crescono senza padre presente o con madre iperprotettiva, sviluppando credenza che devono essere 'bravi' per meritare amore. Pattern: nascondere bisogni, evitare conflitto, cercare approvazione, relazioni con donne problematiche, sesso manipolativo. Cura: creare gruppo di uomini (tribe), esprimere bisogni direttamente, accettare che non piacere a tutti è libertà, imparare a gestire rabbia in modo costruttivo. Il 'bravo ragazzo' è in realtà manipolativo passivo-aggressivo.",
+  },
+  {
+    id: "rollo-rational-male-2013",
+    authors: "Rollo Tomassi",
+    year: 2013,
+    title: "The Rational Male",
+    venue: "CreateSpace",
+    topic: ["seduzione", "dinamiche intersessuali", "red pill", "relazioni", "mascolinità"],
+    library: "experiential",
+    summary: "Hypergamy: le donne tendono naturalmente a selezionare partner di status/socioeconomico pari o superiore. AF/BB (Alpha Fucks / Beta Bucks): dualismo della strategia di scelta femminile. Solipsismo femminile: le donne percepiscono la realtà attraverso il proprio stato emotivo. Plate theory: gli uomini devono avere più opzioni per mantenere potere relazionale. Critica: visione riduzionista, ma contiene intuizioni verificabili su dinamiche di potere e mercato relazionale.",
+  },
+  {
+    id: "max-mate-2015",
+    authors: "Tucker Max, Geoffrey Miller",
+    year: 2015,
+    title: "Mate: Become the Man Women Want",
+    venue: "Little, Brown",
+    topic: ["seduzione", "evoluzione", "attrazione", "fitness", "relazioni"],
+    library: "emerging",
+    summary: "Attrazione come segnalazione evolutiva: le donne valutano salute, status, ricchezza, intelligenza, fedeltà. Non esistono trucchi: l'attrazione è prevedibile e misurabile. I sei pilastri: fisico (salute, fitness, aspetto), materiale (risorse, stabilità), sociale (status, amici, reputazione), etico (onestà, integrità), artistico (creatività, espressione), intellettuale (curiosità, cultura). Investire in sé è l'unica strategia sostenibile. Il gioco mentale conta più delle tattiche.",
+  },
+  {
+    id: "roosh-bang-2007",
+    authors: "Roosh V",
+    year: 2007,
+    title: "Bang: Pickup Tactics from 1st Date to Sex",
+    venue: "DTP",
+    topic: ["seduzione", "pickup", "approccio", "rapporto sessuale", "tattiche"],
+    library: "experiential",
+    summary: "Tattiche di approccio diretto: aprire con osservazione o domanda contestuale. Escalation fisica graduale: toccare braccio, mano, vita, collo, baciare. Gestione delle obiezioni: LMR (Last Minute Resistance) superata con comfort e pazienza, mai forzare. Logistica: portare a casa propria o della donna. Numeri di telefono: chiedere dopo aver stabilito connessione, non prima. Critica etica: molte tattiche manipolative; usare solo per connessione autentica. Il libro funziona meglio come studio di logistica sociale che come manuale morale.",
+  },
+
+  // ====== LIBRERIA SMETTERE DI FUMARE / DIPENDENZE / ABITUDINI ======
+  {
+    id: "carr-easyway-1985",
+    authors: "Allen Carr",
+    year: 1985,
+    title: "The Easy Way to Stop Smoking",
+    venue: "Penguin",
+    topic: ["fumo", "dipendenza", "smettere", "abitudini", "salute"],
+    library: "experiential",
+    summary: "Ri-framing della dipendenza: il fumatore non ama fumare, soffre il vuoto che il fumo stesso ha creato. La sigaretta non calma lo stress, allevia solo il craving generato dalla sigaretta precedente. Il metodo: rimuovere la paura di privazione — la privazione è un'illusione, il non-fumatore non desidera sigarette. Non serve forza di volontà se si capisce che non si perde nulla. Ogni occasione speciale (caffè, festa, stress) è un'illusione: la sigaretta non migliora nulla, peggiora tutto.",
+  },
+  {
+    id: "duhigg-power-habit-2012",
+    authors: "Charles Duhigg",
+    year: 2012,
+    title: "The Power of Habit",
+    venue: "Random House",
+    topic: ["abitudini", "routine", "comportamento", "dipendenza", "produttività"],
+    library: "emerging",
+    summary: "Habit loop: cue (stimolo), routine (comportamento), reward (ricompensa). Per cambiare abitudine, mantenere la stessa cue e la stessa reward, cambiare solo la routine. Keystone habits: abitudini centrali che modificano a cascata altre aree (esercizio, sonno, pianificazione). Willpower è una risorsa limitata: automatizzare le decisioni per conservarla. Craving: il cervello anticipa la ricompensa, non la ricerca. Modificare abitudini richiede credenza che il cambiamento sia possibile — il cambiamento in gruppo aumenta la credenza.",
+  },
+  {
+    id: "fogg-tiny-habits-2019",
+    authors: "BJ Fogg",
+    year: 2019,
+    title: "Tiny Habits: The Small Changes That Change Everything",
+    venue: "Houghton Mifflin Harcourt",
+    topic: ["abitudini", "micro-abitudini", "comportamento", "cambiamento", "produttività"],
+    library: "emerging",
+    summary: "Formula del comportamento: B = MAP (Behavior = Motivation + Ability + Prompt). Per formare abitudini, non aumentare la motivazione, ridurre l'attrito (ability). Micro-habits: comportamenti così piccoli da essere impossibili da fallire (due flessioni, un sorriso, un respiro profondo). Anchor: legare nuovo comportamento a routine esistente (dopo aver lavato i denti, faccio due flessioni). Celebrare immediatamente: il cervello associa il comportamento a emozione positiva. Non contare su forza di volontà, rendi l'abitudine ridicolmente facile.",
+  },
+  {
+    id: "lembke-dopamine-nation-2021",
+    authors: "Anna Lembke",
+    year: 2021,
+    title: "Dopamine Nation: Finding Balance in the Age of Indulgence",
+    venue: "Dutton",
+    topic: ["dipendenza", "dopamina", "piacere", "dolore", "abitudini", "sostanze"],
+    library: "emerging",
+    summary: "Il sistema piacere-dolore nel cervello funziona come una bilancia: più piacere si consuma, più la bilancia si inclina verso il dolore per riequilibrarsi. Questo spiega il crash dopo l'eccesso. La regola del digiuno dopaminergico: astenersi da tutte le fonti di piacere artificiale (social, porn, cibo, sostanze) per 30 giorni resetta i recettori. Il problema non è la sostanza, è il rapporto tra piacere immediato e dolore ritardato. La sofferenza è il prezzo del piacere e viceversa.",
+  },
+  {
+    id: "grace-naked-mind-2015",
+    authors: "Annie Grace",
+    year: 2015,
+    title: "This Naked Mind: Control Alcohol, Find Freedom, Discover Happiness & Change Your Life",
+    venue: "Avery",
+    topic: ["alcol", "dipendenza", "smettere", "abitudini", "salute"],
+    library: "experiential",
+    summary: "L'alcol è l'unico prodotto che, quando usi meno, ti viene detto che hai un problema. Ri-framing: l'alcol non rilassa, è un depressante che crea ansia. Il craving è un'illusione di desiderio creato dal prodotto stesso. Non serve forza di volontà, serve cambiare la percezione: capire che l'alcol toglie più di quanto dia. Il piacere dell'alcol è il sollievo dal craving che l'alcol stesso ha causato. Una volta visto, non può essere non visto.",
+  },
+  {
+    id: "stein-unhooked-2023",
+    authors: "Michael Stein",
+    year: 2023,
+    title: "Unhooked: How to Quit Anything",
+    venue: "Penguin Life",
+    topic: ["dipendenza", "smettere", "abitudini", "comportamento", "salute"],
+    library: "emerging",
+    summary: "Framework delle quattro dimensioni: biologica (tolleranza, craving, withdrawal), psicologica (emozioni, pensieri, coping), sociale (ambiente, persone, trigger), esistenziale (senso, proposito, valori). Non esiste una sola dipendenza: ogni persona ha un mix unico. La risposta non è forza di volontà ma cambiamento di ambiente + sostituzione comportamentale + terapia delle emozioni sottostanti. La domanda fondamentale: cosa sto evitando sentendo usando questa sostanza?",
+  },
+
+  // ====== LIBRERIA MINDSET / SUCCESSO / RESILIENZA ======
+  {
+    id: "dweck-mindset-2006",
+    authors: "Carol Dweck",
+    year: 2006,
+    title: "Mindset: The New Psychology of Success",
+    venue: "Random House",
+    topic: ["mindset", "crescita", "apprendimento", "fallimento", "successo"],
+    library: "peer-reviewed",
+    summary: "Fixed mindset: credenza che le capacità siano innate e immutabili. Growth mindset: credenza che le capacità possano svilupparsi con impegno e strategia. Impatto: bambini con growth mindset persistono più a lungo, affrontano sfide più difficili, recuperano più velocemente dal fallimento. Il feedback: elogiare lo sforzo, non il talento ('hai lavorato duramente' vs 'sei intelligente'). Il fallimento diventa informazione, non identità. Applicazione: cambiare il proprio self-talk da 'non sono bravo in questo' a 'non sono ancora bravo in questo'.",
+  },
+  {
+    id: "duckworth-grit-2016",
+    authors: "Angela Duckworth",
+    year: 2016,
+    title: "Grit: The Power of Passion and Perseverance",
+    venue: "Scribner",
+    topic: ["perseveranza", "passione", "successo", "impegno", "obbiettivi"],
+    library: "peer-reviewed",
+    summary: "Grit = passione + perseveranza nel lungo termine. Non è talento: talento conta meno dello sforzo deliberato nel determinare il successo. Grit scale: questionario predittivo di successo più di QI o talento. Sviluppare grit: interesse innesco (curiosità), pratica deliberata (feedback, riflessione), proposito (senso di utilità al mondo), speranza (ottimismo realistico). La passione non è un fulmine, è un fuoco che si costruisce lentamente. Il successo è maratona, non sprint.",
+  },
+  {
+    id: "holiday-obstacle-way-2014",
+    authors: "Ryan Holiday",
+    year: 2014,
+    title: "The Obstacle Is the Way",
+    venue: "Portfolio",
+    topic: ["stoicismo", "resilienza", "ostacoli", "problemi", "azione"],
+    library: "philosophical",
+    summary: "Stoicismo applicato: l'ostacolo non è qualcosa da evitare, è il percorso. Percezione: vedere gli eventi oggettivamente, senza valutazione emotiva. Azione: agire con deliberazione, non reazione. Volontà: accettare ciò che non possiamo cambiare, cambiare ciò che possiamo. Esempi storici: Lincoln, Roosevelt, Edison hanno trasformato ostacoli in trampolini. Il principio antifragile di Taleb: ciò che ci stressa e ci rende più forti. Non cercare la vita facile, cerca la vita significativa.",
+  },
+  {
+    id: "goggins-cant-hurt-me-2018",
+    authors: "David Goggins",
+    year: 2018,
+    title: "Can't Hurt Me: Master Your Mind and Defy the Odds",
+    venue: "Lioncrest Publishing",
+    topic: ["resilienza", "disciplina", "mentalità", "fatica", "resilienza"],
+    library: "experiential",
+    summary: "Accountability mirror: scrivere su post-it le proprie insufficienze e affrontarle ogni mattina. 40% rule: quando il corpo dice stop, è solo all'inizio della fatica reale. Callus the mind: abituare la mente alla sofferenza come si induriscono le mani. Cookie jar: raccogliere piccole vittorie passate per attingere in momenti di crisi. Taking souls: in gara, quando gli altri mollano, accelerare. Non crescere nell'odio verso sé, ma nell'onestà brutale. Il talento è la scusa dei pigri.",
+  },
+  {
+    id: "newport-so-good-2012",
+    authors: "Cal Newport",
+    year: 2012,
+    title: "So Good They Can't Ignore You",
+    venue: "Grand Central Publishing",
+    topic: ["carriera", "competenza", "passione", "lavoro", "craftsmanship"],
+    library: "emerging",
+    summary: "La passione segue la competenza, non viceversa. Capitalismo delle competenze rare: accumulare abilità rare e preziose per ottenere controllo sulla propria carriera. Mission: una missione chiara emerge solo dopo aver raggiunto la frontiera delle proprie competenze. Controllo: senza competenze rare, il controllo è un'illusione. craftsmen mindset: concentrarsi sul valore che si offre al mondo, non sul valore che il mondo offre a te. La regola dei 10.000 ore è un'approssimazione: conta la pratica deliberata.",
+  },
+  {
+    id: "greene-mastery-2012",
+    authors: "Robert Greene",
+    year: 2012,
+    title: "Mastery",
+    venue: "Viking",
+    topic: ["maestria", "apprendimento", "carriera", "passione", "talento"],
+    library: "experiential",
+    summary: "Fase dell'apprendista: sottomettersi a un maestro, accettare la disciplina, imparare le regole prima di infrangerle. Fase del praticante attivo: applicare le abilità in contesti reali, fare errori, ricevere feedback. Fase della maestria: intuizione sviluppata attraverso anni di pratica, vedere pattern invisibili agli altri. Mentre trascurato: l'inclinazione naturale verso un campo specifico, da seguire fin da giovane. Dead time vs alive time: ogni momento può essere usato per apprendere o per sprecare.",
+  },
+  {
+    id: "gladwell-outliers-2008",
+    authors: "Malcolm Gladwell",
+    year: 2008,
+    title: "Outliers: The Story of Success",
+    venue: "Little, Brown",
+    topic: ["successo", "opportunità", "10.000 ore", "cultura", "talento"],
+    library: "emerging",
+    summary: "Il successo non è solo talento individuale, ma accumulo di vantaggi: data di nascita, classe sociale, accesso a opportunità, cultura familiare. Le 10.000 ore di pratica deliberata sono necessarie ma non sufficienti: servono anche circostanze favorevoli (es. i programmatori nati tra il 1953-1956 avevano il tempo giusto per l'informatica). Cultura del lavoro: coreani e cinesi hanno linguaggi più efficienti per i numeri, accelerando l'apprendimento matematico. Legacy della pagaia: la cooperazione passata influenza la cooperazione presente. Il successo è un racconto collettivo, non individuale.",
+  },
+
+  // ====== LIBRERIA SPORT / FITNESS / CORPO ======
+  {
+    id: "rippetoe-starting-strength-2011",
+    authors: "Mark Rippetoe",
+    year: 2011,
+    title: "Starting Strength: Basic Barbell Training",
+    venue: "The Aasgaard Company",
+    topic: ["forza", "allenamento", "bilanciere", "fitness", "corpo"],
+    library: "experiential",
+    summary: "I cinque movimenti fondamentali: squat, press, bench press, deadlift, power clean. Squat: movimento naturale, fondamentale per forza gambe e schiena. Progressione lineare: aumentare il carico ogni sessione finché possibile. Recupero: il muscolo cresce a riposo, non in palestra. Tecnica prima del carico: movimento corretto previene infortuni e massimizza trasferimento di forza. Nutrizione: proteine e calorie sufficienti per supportare l'adattamento.",
+  },
+  {
+    id: "ferriss-4-hour-body-2010",
+    authors: "Tim Ferriss",
+    year: 2010,
+    title: "The 4-Hour Body",
+    venue: "Crown Publishers",
+    topic: ["fitness", "dieta", "body hacking", "perdita peso", "muscolo"],
+    library: "experiential",
+    summary: "Dieta slow-carb: eliminare carboidrati raffinati, mangiare proteine, legumi, verdure a volontà. Cheat day settimanale per resettare metabolismo e leptina. Minimum effective dose: 4 ore di esercizio al mese per risultati. Occam's Protocol: due esercizi composti, due volte a settimana, progressione minima. Gestione del glucosio: bere caffè o tè verde prima dei pasti per rallentare assorbimento zuccheri. Misurare: circonferenza addome, percentuale grasso, foto prima-dopo. Il corpo è un sistema sperimentale.",
+  },
+  {
+    id: "matthews-bigger-leaner-2014",
+    authors: "Michael Matthews",
+    year: 2014,
+    title: "Bigger Leaner Stronger: The Simple Science of Building the Ultimate Male Body",
+    venue: "Oculus Publishers",
+    topic: ["fitness", "muscolo", "forza", "nutrizione", "corpo"],
+    library: "emerging",
+    summary: "Sovraccarico progressivo: aumentare carico, ripetizioni o volume nel tempo. Intensità: allenare vicino al fallimento (1-2 ripetizioni in riserva). Volume: 10-20 serie settimanali per gruppo muscolare. Frequenza: 2-3 volte a settimana per gruppo. Nutrizione: surplus calorico di 10-15% per massa, deficit del 20-25% per definizione. Proteine: 1.6-2.2g per kg di peso. Recupero: 7-9 ore di sonno. I supplementi contano meno del 5%: creatina e proteine bastano. Non esistono scorciatoie, solo consistenza nel tempo.",
+  },
+
+  // ====== LIBRERIA CREATIVITÀ / ARTE / SCRITTURA ======
+  {
+    id: "cameron-artists-way-1992",
+    authors: "Julia Cameron",
+    year: 1992,
+    title: "The Artist's Way: A Spiritual Path to Higher Creativity",
+    venue: "Jeremy P. Tarcher",
+    topic: ["creatività", "blocco", "scrittura", "arte", "ispirazione"],
+    library: "experiential",
+    summary: "Morning pages: tre pagine di scrittura a mano libera ogni mattina, senza censura. Artist date: un'uscita settimanale da soli per nutrire il bambino interiore. Recupero creativo: sbloccare la creatività soppressa da critiche passate. Shadow artist: chi circonda artisti ma non crea da sé. Affirmations: affermazioni positive per superare credenze limitanti sulla creatività. La creatività è un atto spirituale, non solo artistico.",
+  },
+  {
+    id: "gilbert-big-magic-2015",
+    authors: "Elizabeth Gilbert",
+    year: 2015,
+    title: "Big Magic: Creative Living Beyond Fear",
+    venue: "Riverhead Books",
+    topic: ["creatività", "paura", "arte", "coraggio", "ispirazione"],
+    library: "experiential",
+    summary: "La paura è costante compagna della creatività, ma non deve guidare. Idee come entità viventi che cercano collaboratori umani: se non le cogli, passano a qualcun altro. Permission: non serve permesso per creare, non serve diploma. Scartare l'idea del 'genio sofferente': la sofferenza non è requisito per l'arte. Curiosity over passion: seguire la curiosità invece della passione ossessiva. Il fallimento creativo non è personale, è parte del processo.",
+  },
+  {
+    id: "kleon-steal-like-artist-2012",
+    authors: "Austin Kleon",
+    year: 2012,
+    title: "Steal Like an Artist: 10 Things Nobody Told You About Being Creative",
+    venue: "Workman Publishing",
+    topic: ["creatività", "arte", "ispirazione", "produttività", "scrittura"],
+    library: "experiential",
+    summary: "Niente è originale: tutti gli artisti 'rubano' idee, il punto è da chi e come. Garbage in, garbage out: la qualità del lavoro dipende dalla qualità delle fonti. Side projects: i progetti secondari spesso diventano i più importanti. The Simpsons > School: imparare copiando i maestri, non dalle lezioni teoriche. Scrivere il libro che vorresti leggere. Geografia creativa: viaggiare, cambiare ambiente per stimolare idee. Creatività è sottrazione, non aggiunta.",
   },
 ];

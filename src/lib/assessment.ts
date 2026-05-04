@@ -101,4 +101,99 @@ export const ECR_R_SHORT: ScaleDef = {
     "Punteggi molto elevati su ansia o evitamento indicano uno stile di attaccamento significativamente insicuro. Questo può impattare profondamente le relazioni. Un consulto con uno psicoterapeuta specializzato in attaccamento può essere molto utile.",
 };
 
-export const ALL_SCALES: ScaleDef[] = [ACE_SCALE, ECR_R_SHORT];
+// DASS-21 (Depression Anxiety Stress Scales) — Lovibond & Lovibond 1995
+// Public domain for research and clinical use. 21 item, 3 subscales.
+export const DASS_21: ScaleDef = {
+  id: "dass-21",
+  name: "DASS-21 (Depression, Anxiety, Stress)",
+  description:
+    "Misura depressione, ansia e stress negli ultimi 7 giorni. 0 = Non mi è mai successo, 3 = Mi è successo quasi sempre.",
+  items: [
+    { id: "d1", text: "Mi sono accorto di avere la bocca secca" },
+    { id: "d2", text: "Ho avuto difficoltà a respirare (es. respiro affannoso, senza aver fatto sforzo fisico)" },
+    { id: "d3", text: "Ho avuto mani che tremavano" },
+    { id: "d4", text: "Mi sono sentito preoccupato per situazioni in cui avrei potuto andare in panico e fare figuracce" },
+    { id: "d5", text: "Mi sono sentito vicino al panico" },
+    { id: "d6", text: "Sono consapevole dell'azione del mio cuore in assenza di sforzo fisico (es. sensazione di aumento del battito cardiaco o di mancamento del cuore)" },
+    { id: "d7", text: "Ho avuto paura senza una buona ragione" },
+    { id: "d8", text: "Mi sono sentito senza speranza riguardo al futuro" },
+    { id: "d9", text: "Mi sono trovato a lamentarmi per diverse cose" },
+    { id: "d10", text: "Ho sentito che non avevo nulla da desiderare" },
+    { id: "d11", text: "Mi sono sentito agitato e inquieto" },
+    { id: "d12", text: "Mi è stato difficile rilassarmi" },
+    { id: "d13", text: "Mi sono sentivo depresso e senza speranza" },
+    { id: "d14", text: "Mi sono sentito intollerante a qualsiasi cosa mi impedisse di continuare quello che stavo facendo" },
+    { id: "d15", text: "Mi sono sentito vicino al crollo nervoso" },
+    { id: "d16", text: "Sono riuscito a provare piacere per le cose che mi piacevano" },
+    { id: "d17", text: "Mi sono sentito senza valore" },
+    { id: "d18", text: "Mi sono sentito sensibile ed emotivamente fragile" },
+    { id: "d19", text: "Mi sono reso conto di quello che stava succedendo attorno a me, come se fossi in stato di sonnolenza o da sveglio" },
+    { id: "d20", text: "Mi sono sentito di avere battiti cardiaci in assenza di sforzo fisico" },
+    { id: "d21", text: "Mi sono sentito spaventato e terrorizzato senza una buona ragione" },
+  ],
+  categories: [
+    { label: "Normale", min: 0, max: 9 },
+    { label: "Lieve", min: 10, max: 13 },
+    { label: "Moderato", min: 14, max: 20 },
+    { label: "Severo", min: 21, max: 27 },
+    { label: "Estremo", min: 28, max: 100 },
+  ],
+  compute(answers) {
+    // DASS-21 scoring: depression items (3,5,10,13,16,17,21) — 0-indexed: 2,4,9,12,15,16,20
+    const depIdx = [2, 4, 9, 12, 15, 16, 20];
+    // anxiety items (2,4,7,9,15,19,20) — 0-indexed: 1,3,6,8,14,18,19
+    const anxIdx = [1, 3, 6, 8, 14, 18, 19];
+    // stress items (1,6,8,11,12,14,18) — 0-indexed: 0,5,7,10,11,13,17
+    const strIdx = [0, 5, 7, 10, 11, 13, 17];
+    const dep = depIdx.reduce((sum, i) => sum + (answers[i] ?? 0), 0) * 2;
+    const anx = anxIdx.reduce((sum, i) => sum + (answers[i] ?? 0), 0) * 2;
+    const str = strIdx.reduce((sum, i) => sum + (answers[i] ?? 0), 0) * 2;
+    return { depression: dep, anxiety: anx, stress: str, total: dep + anx + str };
+  },
+  criticalCheck(s) {
+    return s.depression >= 21 || s.anxiety >= 15 || s.stress >= 25;
+  },
+  criticalMessage:
+    "Punteggi elevati su DASS-21 suggeriscono disagio significativo. Atlas può aiutarti a mappare pattern, ma non sostituisce una valutazione clinica. Considera di parlarne con un professionista.",
+};
+
+// Rosenberg Self-Esteem Scale — 10 item, Likert 0-3
+// Public domain, widely used.
+export const ROSENBERG: ScaleDef = {
+  id: "rosenberg",
+  name: "Rosenberg Self-Esteem Scale",
+  description:
+    "Misura autostima globale. 0 = Fortemente in disaccordo, 3 = Fortemente d'accordo.",
+  items: [
+    { id: "r1", text: "Nel complesso sono soddisfatto di me stesso." },
+    { id: "r2", text: "A volte mi sento inutile.", reverse: true },
+    { id: "r3", text: "Sento di essere una persona di valore, almeno come gli altri." },
+    { id: "r4", text: "Sono in grado di fare le cose bene come la maggior parte delle persone." },
+    { id: "r5", text: "Sento di non avere molto di cui andare fiero.", reverse: true },
+    { id: "r6", text: "A volte mi sento un fallimento.", reverse: true },
+    { id: "r7", text: "Sono una persona positiva." },
+    { id: "r8", text: "Sono una persona forte." },
+    { id: "r9", text: "Sono una persona migliore della maggior parte degli altri.", reverse: true },
+    { id: "r10", text: "Sono una persona intelligente." },
+  ],
+  categories: [
+    { label: "Bassa autostima", min: 0, max: 15 },
+    { label: "Autostima normale", min: 16, max: 25 },
+    { label: "Alta autostima", min: 26, max: 30 },
+  ],
+  compute(answers) {
+    const reversed = [1, 4, 5, 8]; // 0-indexed items that are reversed
+    const total = answers.reduce((sum, a, i) => {
+      const val = reversed.includes(i) ? 3 - (a ?? 0) : (a ?? 0);
+      return sum + val;
+    }, 0);
+    return { total, level: total <= 15 ? "bassa" : total <= 25 ? "normale" : "alta" };
+  },
+  criticalCheck(s) {
+    return s.total <= 15;
+  },
+  criticalMessage:
+    "Un punteggio di autostima basso è associato a maggiore vulnerabilità relazionale e stress. Atlas può aiutarti a costruire sicurezza 'earned' attraverso azioni concrete.",
+};
+
+export const ALL_SCALES: ScaleDef[] = [ACE_SCALE, ECR_R_SHORT, DASS_21, ROSENBERG];
